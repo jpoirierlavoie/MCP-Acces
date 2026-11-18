@@ -55,10 +55,17 @@ if (!surMain) {
 }
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
-  echouer(
-    "CLOUDFLARE_API_TOKEN est absent de l'environnement.",
-    "PowerShell : $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()",
-  );
+  const qui = spawnSync("npx", ["wrangler", "whoami"], {
+    cwd: RACINE,
+    stdio: "pipe",
+    shell: process.platform === "win32",
+  });
+  if ((qui.status ?? 1) !== 0) {
+    echouer(
+      "CLOUDFLARE_API_TOKEN est absent et aucune session `wrangler login` active n'a été détectée.",
+      "PowerShell : $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()",
+    );
+  }
 }
 
 function lancer(etape, cmd, args) {
