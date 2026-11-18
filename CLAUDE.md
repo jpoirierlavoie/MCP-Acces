@@ -8,7 +8,7 @@ Portail d'admission du Barreau du Québec, coffre BYOK de clés API CanLII, cons
 
 ```
              ┌────────────────────────────────────────────────────────┐
-             │      droit-civil-quebecois (Plugin Cadre v2.0.2)       │
+             │      droit-civil-quebecois (Plugin Cadre v2.1.0)       │
              └──────┬───────────────────────┬──────────────────┬──────┘
                     │                       │                  │
         (serveur `lois`, 10 outils)  (serveur `juris`, 10)  (serveur `outils`, 12)

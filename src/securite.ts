@@ -176,15 +176,16 @@ export async function lireFormulaireBorne(
  * (`same-origin` uniquement, rejetant à la fois `cross-site` et les sous-domaines voisins `same-site`).
  */
 export function estOrigineFormulaireValide(request: Request, urlRequete: URL): boolean {
-  const secFetchSite = request.headers.get("Sec-Fetch-Site");
-  if (secFetchSite !== null) {
-    const mode = secFetchSite.trim().toLowerCase();
-    if (mode !== "same-origin" && mode !== "none") {
-      return false;
-    }
+  const secFetchSiteBrut = request.headers.get("Sec-Fetch-Site");
+  const modeFetch = secFetchSiteBrut !== null ? secFetchSiteBrut.trim().toLowerCase() : null;
+  if (modeFetch !== null && modeFetch !== "same-origin" && modeFetch !== "none") {
+    return false;
   }
   const origin = request.headers.get("Origin");
   if (origin !== null) {
+    if (origin === "null") {
+      return modeFetch === "same-origin";
+    }
     return origin === urlRequete.origin;
   }
   const referer = request.headers.get("Referer");

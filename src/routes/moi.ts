@@ -251,7 +251,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
   const geminiExtensionJson = JSON.stringify(
     {
       name: "droit-civil-quebecois",
-      version: "2.0.2",
+      version: "2.1.0",
       description:
         "Recherche, analyse, rédaction, administration du litige et déontologie en droit civil et commercial québécois. Connecteurs « lois », « juris » et « outils ».",
       contextFileName: [],

@@ -281,7 +281,7 @@ export interface OptionsPageHtml {
   readonly method?: string;
   readonly formAction?: string;
   readonly cachePublicMaxAge?: number;
-  readonly referrerPolicy?: "no-referrer" | "strict-origin-when-cross-origin";
+  readonly referrerPolicy?: "no-referrer" | "same-origin" | "strict-origin-when-cross-origin";
   readonly entetesSupplementaires?: Record<string, string>;
 }
 
@@ -299,7 +299,11 @@ export function repondrePageHtml(options: OptionsPageHtml): Response {
       : "no-store";
   const referrerPolicy =
     options.referrerPolicy ??
-    (options.cachePublicMaxAge !== undefined ? "strict-origin-when-cross-origin" : "no-referrer");
+    (options.cachePublicMaxAge !== undefined
+      ? "strict-origin-when-cross-origin"
+      : formAction === "'none'"
+        ? "no-referrer"
+        : "same-origin");
 
   const headers = new Headers({
     "Content-Type": "text/html; charset=utf-8",
