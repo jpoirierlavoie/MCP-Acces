@@ -7,7 +7,3 @@
 #      alias CVE inutilisé), avec la DATE AAAA-MM-JJ et le MOTIF complet.
 #   3. La parité bidirectionnelle stricte avec `npm audit` est vérifiée par `npm run audit`
 #      (`scripts/verifier-audit.mjs`).
-
-[[IgnoredVulns]]
-id = "GHSA-fc5q-39xc-vjpf"
-reason = "2026-11-18 : ReDoS sur extglobs répétés dans picomatch <= 4.0.7 (aucun correctif publié sur npm à ce jour) ; dépendance exclusivement de développement (vitest/vite/tinyglobby), absente de src/ et du bundle déployé (dependencies vide). À retirer dès publication de picomatch > 4.0.7."
