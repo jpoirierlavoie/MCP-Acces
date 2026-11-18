@@ -1,0 +1,831 @@
+import {
+  type BinaireD1,
+  empreinte,
+  frapperJeton,
+  horodatageIsoUtc,
+  ouvrirCoffre,
+} from "@poirierlavoie/mcp-socle";
+import { beforeEach, describe, expect, it } from "vitest";
+import { COURRIEL_CONTACT_RESPONSABLE } from "../src/constantes";
+import {
+  CLEF_CANLII_VALIDE_TEST,
+  creerAppTest,
+  creerBoiteCourriel,
+  creerEnvTest,
+  creerExecutionContextTest,
+  creerFetchSimule,
+  creerLimiteurFenetre,
+  reinitialiserBaseIdentite,
+  SECRET_CONSOLE_TEST,
+  SECRET_MAITRE_TEST,
+} from "./helpers";
+
+function construireCorpsDemande(surcharges: Record<string, string> = {}): string {
+  const base: Record<string, string> = {
+    nom: "Marie Tremblay",
+    numero_membre: "201845-3",
+    section: "Montréal",
+    courriel: "mtremblay@cabinet-exemple.ca",
+    cabinet: "Tremblay & Associés",
+    clef_canlii: CLEF_CANLII_VALIDE_TEST,
+    attestation_acceptee: "oui",
+    cgu_acceptees: "oui",
+    ...surcharges,
+  };
+  return new URLSearchParams(base).toString();
+}
+
+describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLII et coffre", () => {
+  beforeEach(async () => {
+    await reinitialiserBaseIdentite();
+  });
+
+  it("fermé par défaut sur MODE_ADMISSION ('ferme' ou absent) et rejette les requêtes cross-site", async () => {
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    for (const mode of ["ferme", undefined, "inconnu"]) {
+      const envFerme = creerEnvTest({ MODE_ADMISSION: mode });
+      const ctx = creerExecutionContextTest();
+      const res = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/demande", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Origin: "https://acces.poirierlavoie.ca",
+          },
+          body: construireCorpsDemande(),
+        }),
+        envFerme,
+        ctx,
+      );
+      expect(res.status).toBe(403);
+    }
+
+    const resCrossSite = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Origin: "https://attaquant.exemple",
+        },
+        body: construireCorpsDemande(),
+      }),
+      creerEnvTest(),
+      creerExecutionContextTest(),
+    );
+    expect(resCrossSite.status).toBe(403);
+
+    const resSecFetchCross = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Sec-Fetch-Site": "cross-site",
+        },
+        body: construireCorpsDemande(),
+      }),
+      creerEnvTest(),
+      creerExecutionContextTest(),
+    );
+    expect(resSecFetchCross.status).toBe(403);
+
+    // 415 sur mauvais Content-Type
+    const res415 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+      creerEnvTest(),
+      creerExecutionContextTest(),
+    );
+    expect(res415.status).toBe(415);
+
+    // 413 sur corps dépassant MAX_OCTETS_FORMULAIRE (16 Kio)
+    const res413 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `nom=${"a".repeat(20_000)}`,
+      }),
+      creerEnvTest(),
+      creerExecutionContextTest(),
+    );
+    expect(res413.status).toBe(413);
+
+    // 400 sur séquence d'octets UTF-8 invalide
+    const resUtf8Invalide = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new Uint8Array([0x6e, 0x6f, 0x6d, 0x3d, 0xff, 0xfe]),
+      }),
+      creerEnvTest(),
+      creerExecutionContextTest(),
+    );
+    expect(resUtf8Invalide.status).toBe(400);
+  });
+
+  it("applique RL_DEMANDE_IP à 10/min (429 à la 11e requête)", async () => {
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const rl = creerLimiteurFenetre(10);
+    const envLim = creerEnvTest({ RL_DEMANDE_IP: rl });
+
+    for (let i = 1; i <= 10; i++) {
+      const res = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/demande", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "CF-Connecting-IP": "198.51.100.42",
+          },
+          body: construireCorpsDemande({ nom: "" }), // Échoue en 400 après le contrôle de débit
+        }),
+        envLim,
+        creerExecutionContextTest(),
+      );
+      expect(res.status).toBe(400);
+    }
+
+    const onzieme = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "CF-Connecting-IP": "198.51.100.42",
+        },
+        body: construireCorpsDemande(),
+      }),
+      envLim,
+      creerExecutionContextTest(),
+    );
+    expect(onzieme.status).toBe(429);
+    expect(onzieme.headers.get("Retry-After")).toBe("60");
+  });
+
+  it("G9 : refuse une clé CanLII invalide et expurge toute clé des messages d'erreur réseau", async () => {
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite });
+    const appRefus = creerAppTest({ fetchExterne: creerFetchSimule({ clefsCanliiValides: [] }) });
+
+    const resRefus = await appRefus.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({ clef_canlii: "clef_invalide_secret_xyz" }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRefus.status).toBe(400);
+    const htmlRefus = await resRefus.text();
+    expect(htmlRefus).toContain("401/403");
+    expect(htmlRefus).not.toContain("clef_invalide_secret_xyz");
+    expect(boite.messages.length).toBe(0);
+
+    // Simulation d'une exception réseau contenant l'URL complète avec ?api_key=...
+    const secretFuitant = "clef_ultra_secrete_canlii_9999";
+    const appErreur = creerAppTest({
+      fetchExterne: creerFetchSimule({ erreurReseauCanlii: "Échec DNS amont" }),
+    });
+    const resErreur = await appErreur.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({ clef_canlii: secretFuitant }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resErreur.status).toBe(400);
+    const htmlErreur = await resErreur.text();
+    expect(htmlErreur).not.toContain(secretFuitant);
+    expect(htmlErreur).toContain("[EXPURGE]");
+  });
+
+  it("empêche le squattage d'un numéro du Barreau avant confirmation courriel, survit au préchargement GET SafeLinks et scelle le coffre (G8, G10)", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    // 1. Un tiers tente de squatter le numéro du Barreau 201845-3 avec une fausse boîte courriel
+    const resSquat = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          nom: "Usurpateur",
+          numero_membre: "201845-3",
+          courriel: "squatteur@autre-domaine.ca",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resSquat.status).toBe(200);
+
+    // Aucun enregistrement n'existe dans `titulaire` : la vraie avocate n'est PAS bloquée !
+    const nbTitulairesAvant = await db
+      .prepare("SELECT COUNT(*) AS n FROM titulaire")
+      .first<{ n: number }>();
+    expect(nbTitulairesAvant?.n).toBe(0);
+
+    // 2. La vraie avocate soumet sa demande avec le même numéro 2018453 (sans tiret -> même normalisation)
+    const resVraie = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          nom: "Marie Tremblay",
+          numero_membre: "2018453",
+          courriel: "mtremblay@cabinet-exemple.ca",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resVraie.status).toBe(200);
+    expect(boite.messages.length).toBe(2);
+
+    const courrielVraie = boite.dernier();
+    expect(courrielVraie.from).toEqual({
+      name: "Accès MCP — Droit civil québécois",
+      email: "noreply@acces.poirierlavoie.ca",
+    });
+    const mUrl =
+      /https:\/\/acces\.poirierlavoie\.ca(\/demande\/confirmer\?jeton=[A-Za-z0-9_-]{43})/.exec(
+        courrielVraie.text,
+      );
+    expect(mUrl?.[1]).toBeDefined();
+    const cheminConfirmer = mUrl![1]!;
+    const jetonConfirmation = new URL(
+      `https://acces.poirierlavoie.ca${cheminConfirmer}`,
+    ).searchParams.get("jeton")!;
+
+    // 3. Un robot SafeLinks / Proofpoint effectue un GET sur le lien : ne doit PAS consommer le jeton
+    const resSafeLinks = await app.fetch(
+      new Request(`https://acces.poirierlavoie.ca${cheminConfirmer}`, { method: "GET" }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resSafeLinks.status).toBe(200);
+    expect(await resSafeLinks.text()).toContain("Confirmer mon courriel");
+    expect(
+      (await db.prepare("SELECT COUNT(*) AS n FROM titulaire").first<{ n: number }>())?.n,
+    ).toBe(0);
+
+    // 4. L'avocate clique sur le bouton POST de confirmation -> promotion atomique vers titulaire + coffre_clef
+    const resConfirmer = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: jetonConfirmation }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConfirmer.status).toBe(200);
+    expect(await resConfirmer.text()).toContain("en_attente");
+
+    // Rejeu du même jeton refusé en 400
+    const resRejeu = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: jetonConfirmation }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRejeu.status).toBe(400);
+
+    // Vérification en base : titulaire créé et clé ouvrable via `ouvrirCoffre`
+    const titulaire = await db
+      .prepare("SELECT id, etat, numero_membre, courriel_verifie_le FROM titulaire LIMIT 1")
+      .first<{ id: string; etat: string; numero_membre: string; courriel_verifie_le: string }>();
+    expect(titulaire?.etat).toBe("en_attente");
+    expect(titulaire?.numero_membre).toBe("2018453");
+    expect(titulaire?.courriel_verifie_le).toBeTruthy();
+
+    const coffre = await db
+      .prepare(
+        "SELECT version, iv, chiffre, repere, empreinte_clef, etat FROM coffre_clef WHERE titulaire_id = ?1",
+      )
+      .bind(titulaire!.id)
+      .first<{
+        version: number;
+        iv: BinaireD1;
+        chiffre: BinaireD1;
+        repere: string;
+        empreinte_clef: string;
+        etat: "valide" | "refusee" | "inconnue";
+      }>();
+    expect(coffre?.etat).toBe("valide");
+
+    const ouvert = await ouvrirCoffre(
+      {
+        titulaireId: titulaire!.id,
+        usage: "canlii",
+        entree: {
+          titulaireId: titulaire!.id,
+          version: coffre!.version,
+          iv: coffre!.iv,
+          chiffre: coffre!.chiffre,
+          repere: coffre!.repere,
+          empreinteClef: coffre!.empreinte_clef,
+          etat: coffre!.etat,
+        },
+        maitres: { 1: SECRET_MAITRE_TEST },
+      },
+      (clair) => clair === CLEF_CANLII_VALIDE_TEST,
+    );
+    expect(ouvert).toEqual({ ok: true, client: true, provenance: "coffre" });
+
+    // 5. Absence d'oracle d'énumération : resoumettre pour ce même titulaire rend le même HTTP 200 neutre
+    const resDoublon = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resDoublon.status).toBe(200);
+    expect(await resDoublon.text()).toContain("Vérifiez votre boîte courriel");
+    expect(boite.dernier().subject).toContain("existe déjà");
+  });
+
+  it("valide le mode 'invitation' (code valide, courriel verrouillé et consommation unique)", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const envInvitation = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "invitation" });
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    const codeInvitation = frapperJeton();
+    const maintenant = new Date("2026-11-18T12:00:00.000Z");
+    await db
+      .prepare(
+        `INSERT INTO invitation_acces (id, empreinte_code, courriel_cible, cohorte, cree_le, expire_le, consomme_le, titulaire_id)
+         VALUES ('inv_1', ?1, 'invite@cabinet.qc.ca', 'cohorte-1', ?2, ?3, NULL, NULL)`,
+      )
+      .bind(
+        await empreinte(codeInvitation),
+        horodatageIsoUtc(maintenant),
+        horodatageIsoUtc(new Date(maintenant.getTime() + 86_400_000)),
+      )
+      .run();
+
+    // Mauvais courriel refusé
+    const resMauvaisCourriel = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          courriel: "autre@cabinet.qc.ca",
+          code_invitation: codeInvitation,
+        }),
+      }),
+      envInvitation,
+      creerExecutionContextTest(),
+    );
+    expect(resMauvaisCourriel.status).toBe(400);
+
+    // Bon courriel accepté
+    const resBon = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          courriel: "invite@cabinet.qc.ca",
+          code_invitation: codeInvitation,
+        }),
+      }),
+      envInvitation,
+      creerExecutionContextTest(),
+    );
+    expect(resBon.status).toBe(200);
+    const mJeton = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text);
+    expect(mJeton?.[1]).toBeDefined();
+
+    const resConf = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: mJeton![1]! }).toString(),
+      }),
+      envInvitation,
+      creerExecutionContextTest(),
+    );
+    expect(resConf.status).toBe(200);
+
+    const invApres = await db
+      .prepare("SELECT consomme_le, titulaire_id FROM invitation_acces WHERE id = 'inv_1'")
+      .first<{ consomme_le: string | null; titulaire_id: string | null }>();
+    expect(invApres?.consomme_le).toBeTruthy();
+    expect(invApres?.titulaire_id).toBeTruthy();
+  });
+
+  it("préserve le bouton de réessai (503) en cas d'indisponibilité transitoire CanLII à la confirmation et gère les courses concurrentes", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
+    let enPanne = true;
+
+    const app = creerAppTest({
+      fetchExterne: async (entree, init) => {
+        if (enPanne) {
+          return new Response("Service Unavailable", { status: 503 });
+        }
+        return await creerFetchSimule()(entree, init);
+      },
+    });
+
+    enPanne = false;
+    await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    const jeton = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
+
+    // Indisponibilité transitoire CanLII lors de la confirmation -> 503 avec jeton non consommé et formulaire de réessai présent
+    enPanne = true;
+    const resPanne = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resPanne.status).toBe(503);
+    expect(await resPanne.text()).toContain(`value="${jeton}"`);
+
+    // CanLII rétabli : deux soumissions concurrentes avec le même jeton -> exactement une réussit (200) et l'autre échoue (400)
+    enPanne = false;
+    const [r1, r2] = await Promise.all([
+      app.fetch(
+        new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ jeton }).toString(),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      ),
+      app.fetch(
+        new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ jeton }).toString(),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      ),
+    ]);
+    expect([r1.status, r2.status].sort()).toEqual([200, 400]);
+    expect(
+      (await db.prepare("SELECT COUNT(*) AS n FROM titulaire").first<{ n: number }>())?.n,
+    ).toBe(1);
+  });
+
+  it("n'alerte l'exploitant qu'après POST /demande/confirmer (jamais sur POST /demande), sans secret, et survit à un échec COURRIEL.send", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    const alertesExploitant = () =>
+      boite.messages.filter((m) => m.to === COURRIEL_CONTACT_RESPONSABLE);
+
+    // (a) POST /demande non confirmé : courriel envoyé uniquement au demandeur, zéro alerte à l'exploitant
+    const resDemande = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          nom: "Claire <Bélanger>",
+          numero_membre: "202011-9",
+          section: "Québec",
+          courriel: "cbelanger@cabinet-quebec.ca",
+          cabinet: "Bélanger & Co",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resDemande.status).toBe(200);
+    expect(boite.messages.length).toBe(1);
+    expect(boite.dernier().to).toBe("cbelanger@cabinet-quebec.ca");
+    expect(alertesExploitant().length).toBe(0);
+
+    const jeton1 = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
+
+    // Préchargement GET SafeLinks : zéro alerte à l'exploitant
+    const resGetConf = await app.fetch(
+      new Request(
+        `https://acces.poirierlavoie.ca/demande/confirmer?jeton=${encodeURIComponent(jeton1)}`,
+        { method: "GET" },
+      ),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resGetConf.status).toBe(200);
+    expect(alertesExploitant().length).toBe(0);
+
+    // (b) POST /demande/confirmer : promotion atomique + alerte envoyée à COURRIEL_CONTACT_RESPONSABLE
+    const resPostConf = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: jeton1 }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resPostConf.status).toBe(200);
+    expect(alertesExploitant().length).toBe(1);
+
+    const alerte = alertesExploitant()[0]!;
+    expect(alerte.from).toEqual({
+      name: "Accès MCP — Droit civil québécois",
+      email: "noreply@acces.poirierlavoie.ca",
+    });
+    expect(alerte.to).toBe("jason@poirierlavoie.ca");
+    expect(alerte.subject).toContain("Claire <Bélanger>");
+    expect(alerte.subject).toContain("2020119");
+    expect(alerte.subject).not.toMatch(/[\r\n]/);
+
+    // Contenu texte et HTML complet (échappé contre l'injection HTML)
+    expect(alerte.text).toContain("Claire <Bélanger>");
+    expect(alerte.text).toContain("2020119");
+    expect(alerte.text).toContain("Québec");
+    expect(alerte.text).toContain("cbelanger@cabinet-quebec.ca");
+    expect(alerte.text).toContain("Bélanger & Co");
+    expect(alerte.text).toContain("https://acces.poirierlavoie.ca/exploitant");
+
+    expect(alerte.html).toContain("Claire &lt;Bélanger&gt;");
+    expect(alerte.html).not.toContain("<Bélanger>");
+    expect(alerte.html).toContain("2020119");
+    expect(alerte.html).toContain("Québec");
+    expect(alerte.html).toContain("cbelanger@cabinet-quebec.ca");
+    expect(alerte.html).toContain("Bélanger &amp; Co");
+    expect(alerte.html).toContain('href="https://acces.poirierlavoie.ca/exploitant"');
+
+    // Aucun secret, jeton, repère ni empreinte de coffre dans l'alerte
+    const coffre1 = await db
+      .prepare("SELECT repere, empreinte_clef FROM coffre_clef LIMIT 1")
+      .first<{ repere: string; empreinte_clef: string }>();
+    for (const secretInterdit of [
+      CLEF_CANLII_VALIDE_TEST,
+      jeton1,
+      coffre1!.repere,
+      coffre1!.empreinte_clef,
+      SECRET_MAITRE_TEST,
+      SECRET_CONSOLE_TEST,
+    ]) {
+      expect(alerte.subject).not.toContain(secretInterdit);
+      expect(alerte.text).not.toContain(secretInterdit);
+      expect(alerte.html).not.toContain(secretInterdit);
+    }
+
+    // Un rejeu du jeton de confirmation (400) ou une resoumission doublon sur /demande n'envoie aucune nouvelle alerte exploitant
+    const resRejeu = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: jeton1 }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRejeu.status).toBe(400);
+    expect(alertesExploitant().length).toBe(1);
+
+    const resDoublon = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          nom: "Claire <Bélanger>",
+          numero_membre: "202011-9",
+          section: "Québec",
+          courriel: "cbelanger@cabinet-quebec.ca",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resDoublon.status).toBe(200);
+    expect(alertesExploitant().length).toBe(1);
+
+    // (c) Panne d'envoi `env.COURRIEL.send` lors de POST /demande/confirmer (et cabinet vide) :
+    // la confirmation réussit en 200 et conserve le titulaire + sa clé scellée en base
+    const resDemande2 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({
+          nom: "Luc Roy",
+          numero_membre: "202199-1",
+          section: "Hull",
+          courriel: "lroy@pratique-solo.qc.ca",
+          cabinet: "",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resDemande2.status).toBe(200);
+    const jeton2 = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
+
+    const envCourrielEnPanne = creerEnvTest({
+      MODE_ADMISSION: "ouvert",
+      COURRIEL: {
+        async send() {
+          throw new Error("Panne transitoire Cloudflare Email Sending");
+        },
+      },
+    });
+
+    const resConfMalgrePanne = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ jeton: jeton2 }).toString(),
+      }),
+      envCourrielEnPanne,
+      creerExecutionContextTest(),
+    );
+    expect(resConfMalgrePanne.status).toBe(200);
+    expect(await resConfMalgrePanne.text()).toContain("en_attente");
+
+    const titulaire2 = await db
+      .prepare("SELECT id, etat, cabinet FROM titulaire WHERE numero_membre = '2021991'")
+      .first<{ id: string; etat: string; cabinet: string | null }>();
+    expect(titulaire2).toEqual({
+      id: expect.any(String),
+      etat: "en_attente",
+      cabinet: null,
+    });
+    const coffre2 = await db
+      .prepare("SELECT etat FROM coffre_clef WHERE titulaire_id = ?1")
+      .bind(titulaire2!.id)
+      .first<{ etat: string }>();
+    expect(coffre2?.etat).toBe("valide");
+  });
+
+  it("neutralise les caractères Unicode invisibles/bidi/C1, garantit le rappel déterministe sur collision OR et n'alerte pas sur 409", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    const alertesExploitant = () =>
+      boite.messages.filter((m) => m.to === COURRIEL_CONTACT_RESPONSABLE);
+
+    // 1. Rejet des noms/cabinets purement invisibles ou sans lettres et des courriels porteurs de contrôles/bidi
+    const casInvalides: Array<Record<string, string>> = [
+      { nom: "\u200B\u200B\u200B" },
+      { nom: "\u2800\u2800\u2800" },
+      { nom: "123456" },
+      { cabinet: "\u200B\u2060" },
+      { courriel: "avocat\u202E@cabinet.qc.ca" },
+      { courriel: "avocat\u200B@cabinet.qc.ca" },
+      { courriel: "avocat\x85@cabinet.qc.ca" },
+      { courriel: ".avocat.@cabinet.qc.ca" },
+      { courriel: "avocat@-cabinet.qc.ca" },
+    ];
+    for (const invalide of casInvalides) {
+      const resInv = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/demande", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: construireCorpsDemande(invalide),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      );
+      expect(resInv.status, JSON.stringify(invalide)).toBe(400);
+    }
+    expect(boite.messages).toHaveLength(0);
+
+    // 2. Assainissement des contrôles C1 (\x85), séparateurs (\u2028) et surcharges bidirectionnelles (\u202E, \u2066..\u2069)
+    const entetesAvocat1 = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "CF-Connecting-IP": "198.51.100.21",
+    };
+    const entetesAvocat2 = {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "CF-Connecting-IP": "198.51.100.22",
+    };
+    const resBidi = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: entetesAvocat1,
+        body: construireCorpsDemande({
+          nom: "Jean\u200B \u202E9-999999\x85Be\u0301langer",
+          numero_membre: "202311-4",
+          section: "Montréal",
+          courriel: "jbelanger@cabinet-mtl.ca",
+          cabinet: "Étude\u2028\u2066Bélanger\u2069",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resBidi.status).toBe(200);
+    const jetonBidi = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
+
+    // Deuxième demande concurrente pour le MÊME numéro du Barreau avant confirmation de la première
+    const resConcurrente = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: entetesAvocat2,
+        body: construireCorpsDemande({
+          nom: "Jean Bélanger",
+          numero_membre: "2023114",
+          section: "Montréal",
+          courriel: "jbelanger2@cabinet-mtl.ca",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConcurrente.status).toBe(200);
+    const jetonConcurrent = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
+
+    // Confirmation de la première demande -> 200 + 1 alerte exploitant exempte de tout caractère Cc/Cf
+    const resConf1 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: entetesAvocat1,
+        body: new URLSearchParams({ jeton: jetonBidi }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConf1.status).toBe(200);
+    expect(alertesExploitant()).toHaveLength(1);
+    const alerte = alertesExploitant()[0]!;
+    expect(alerte.subject).toContain("Me Jean 9-999999 Bélanger");
+    expect(alerte.subject).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+    expect(alerte.text).toContain("Étude Bélanger");
+    expect(alerte.text.replace(/\n/g, "")).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+    expect(alerte.html.replace(/\n/g, "")).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+
+    // Confirmation de la seconde demande concurrente -> 409 Conflict et ZÉRO nouvelle alerte exploitant
+    const resConf409 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: entetesAvocat2,
+        body: new URLSearchParams({ jeton: jetonConcurrent }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConf409.status).toBe(409);
+    expect(alertesExploitant()).toHaveLength(1);
+
+    // 3. Déterminisme du rappel de compte existant lorsque numero_membre correspond à une ligne antérieure mais courriel correspond au demandeur
+    const maintenantIso = horodatageIsoUtc();
+    await db
+      .prepare(
+        `INSERT INTO titulaire (
+          id, cree_le, etat, nom, numero_membre, section, courriel, cabinet,
+          courriel_verifie_le, attestation_le, attestation_ver, cgu_ver, hybride_permis, note_admission
+        ) VALUES ('tit_second', ?1, 'actif', 'Anne Côté', '2024998', 'Québec', 'acote@cabinet-qc.ca', NULL, ?1, ?1, '2026-11-18', '2026-11-18', 1, 'Bottin OK')`,
+      )
+      .bind(maintenantIso)
+      .run();
+
+    const nbMessagesAvant = boite.messages.length;
+    const resCollisionOr = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "CF-Connecting-IP": "198.51.100.23",
+        },
+        body: construireCorpsDemande({
+          nom: "Anne Côté",
+          numero_membre: "202311-4", // Appartient à la 1re ligne (jbelanger@cabinet-mtl.ca)
+          courriel: "acote@cabinet-qc.ca", // Appartient à la 2e ligne (Anne Côté)
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resCollisionOr.status).toBe(200);
+    expect(boite.messages.length).toBe(nbMessagesAvant + 1);
+    expect(boite.dernier().to).toBe("acote@cabinet-qc.ca");
+    expect(boite.dernier().subject).toContain("existe déjà");
+    expect(alertesExploitant()).toHaveLength(1);
+  });
+});

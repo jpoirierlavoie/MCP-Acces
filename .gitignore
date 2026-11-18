@@ -1,0 +1,30 @@
+# Node / Worker
+node_modules/
+.wrangler/
+worker-configuration.d.ts
+
+# Secrets locaux — ne JAMAIS versionner
+cf.token
+*.token
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+mcp.url
+.env
+.env.*
+.secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+*.keystore
+secrets.json
+credentials.json
+
+# Configuration locale d'outils
+.claude/settings.local.json
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
