@@ -71,6 +71,7 @@ src/
 7. **Limiteurs à `namespace_id` distincts (`G34`) :** `"1031"` (`RL_DEMANDE_IP`, `10/60 s`) et `"1032"` (`RL_OAUTH_IP`, `60/60 s`).
 8. **OAuth 2.1 sans redirection ouverte ni SSRF (`G35`, `G36`) :** Validation de `client_id` et `redirect_uri` avant toute redirection, résolution réseau CIMD réservée aux titulaires authentifiés (`redirect: "error"`), jeton de consentement HMAC liant tous les paramètres OAuth, PKCE `S256` obligatoire, validation RFC 8707 `resource`, consommation atomique immédiate et révocation sur rejeu de `code_oauth`.
 9. **Secrets locaux :** Ne jamais lire, afficher ni committer `cf.token`, `*.token`, `.dev.vars`, `mcp.url` ou `.env*`.
+10. **Gouvernance Git (`main-pr-and-ci`) :** Le contournement administrateur du ruleset `main-pr-and-ci` est restreint à `pull_request` — **ne jamais pousser directement sur `main`** ; travailler sur une branche dédiée, ouvrir une Pull Request, attendre le passage des contrôles requis (`CI`, `CodeQL`, `OSV-Scanner`, `Trivy`), puis fusionner par *squash* (`gh pr merge --squash --delete-branch`).
 
 ---
 
