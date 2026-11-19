@@ -77,6 +77,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       authorization_endpoint: string;
       token_endpoint: string;
       revocation_endpoint: string;
+      registration_endpoint: string;
       code_challenge_methods_supported: string[];
       client_id_metadata_document_supported: boolean;
       scopes_supported: string[];
@@ -85,6 +86,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(doc.authorization_endpoint).toBe("https://acces.poirierlavoie.ca/oauth/authorize");
     expect(doc.token_endpoint).toBe("https://acces.poirierlavoie.ca/oauth/token");
     expect(doc.revocation_endpoint).toBe("https://acces.poirierlavoie.ca/oauth/revoke");
+    expect(doc.registration_endpoint).toBe("https://acces.poirierlavoie.ca/oauth/register");
     expect(doc.code_challenge_methods_supported).toEqual(["S256"]);
     expect(doc.client_id_metadata_document_supported).toBe(true);
     expect(doc.scopes_supported).toEqual(["les_deux", "jurisprudence", "legislation"]);
@@ -1093,5 +1095,299 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       creerExecutionContextTest(),
     );
     expect(resEchangeSuspendu.status).toBe(400);
+  });
+
+  it("exécute RFC 7591 POST /oauth/register sans état (public loopback /oauth-callback et confidentiels), rejette altérations et SSRF, et explique l'attente Bottin", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_dcr");
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const envTest = creerEnvTest();
+
+    const clientsAvant = (
+      await db.prepare("SELECT COUNT(*) AS n FROM client_oauth").first<{ n: number }>()
+    )?.n;
+
+    // 1. Rejets RFC 7591 sur SSRF / HTTP non loopback / métadonnées refusées
+    const resSsrf = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          redirect_uris: ["https://169.254.169.254/latest/meta-data"],
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resSsrf.status).toBe(400);
+    expect(((await resSsrf.json()) as { error: string }).error).toBe("invalid_redirect_uri");
+
+    const resBadGrant = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+          grant_types: ["client_credentials"],
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resBadGrant.status).toBe(400);
+    expect(((await resBadGrant.json()) as { error: string }).error).toBe("invalid_client_metadata");
+
+    // 2. Inscription publique sans état (Antigravity loopback /oauth-callback, refresh_token ignoré)
+    const resRegPublic = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_name: "Antigravity IDE",
+          redirect_uris: ["http://127.0.0.1:54321/oauth-callback"],
+          grant_types: ["authorization_code", "refresh_token"],
+          response_types: ["code"],
+          token_endpoint_auth_method: "none",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRegPublic.status).toBe(201);
+    const metaPublic = (await resRegPublic.json()) as {
+      client_id: string;
+      client_secret?: string;
+      grant_types: string[];
+      response_types: string[];
+      token_endpoint_auth_method: string;
+    };
+    expect(metaPublic.client_id.startsWith("dcr1.")).toBe(true);
+    expect(metaPublic.client_secret).toBeUndefined();
+    expect(metaPublic.grant_types).toEqual(["authorization_code"]);
+    expect(metaPublic.response_types).toEqual(["code"]);
+    expect(metaPublic.token_endpoint_auth_method).toBe("none");
+
+    // Aucune écriture D1 dans client_oauth (anti-pollution sans état)
+    const clientsApres = (
+      await db.prepare("SELECT COUNT(*) AS n FROM client_oauth").first<{ n: number }>()
+    )?.n;
+    expect(clientsApres).toBe(clientsAvant);
+
+    const verifier = `${frapperJeton()}${frapperJeton().slice(0, 12)}`;
+    const defi = await calculerDefiPkceS256(verifier);
+
+    // Rejet d'un client_id dcr1.* altéré AVANT redirection
+    const resAltere = await app.fetch(
+      new Request(
+        `https://acces.poirierlavoie.ca/oauth/authorize?` +
+          new URLSearchParams({
+            response_type: "code",
+            client_id: `${metaPublic.client_id.slice(0, -1)}0`,
+            redirect_uri: "http://127.0.0.1:54321/oauth-callback",
+            code_challenge: defi,
+            code_challenge_method: "S256",
+          }).toString(),
+        { headers: { Cookie: cookieMoi } },
+      ),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resAltere.status).toBe(400);
+
+    // Flux complet DCR public : /oauth/authorize -> /oauth/token -> resoudreJeton + libelle lisible
+    const urlAuthDcr =
+      `https://acces.poirierlavoie.ca/oauth/authorize?` +
+      new URLSearchParams({
+        response_type: "code",
+        client_id: metaPublic.client_id,
+        redirect_uri: "http://127.0.0.1:54321/oauth-callback",
+        scope: "les_deux",
+        code_challenge: defi,
+        code_challenge_method: "S256",
+        state: "st_dcr",
+      }).toString();
+
+    const resGetDcr = await app.fetch(
+      new Request(urlAuthDcr, { headers: { Cookie: cookieMoi } }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resGetDcr.status).toBe(200);
+    const htmlDcr = await resGetDcr.text();
+    expect(htmlDcr).toContain("Antigravity IDE");
+    expect(htmlDcr).toContain("inscription dynamique OAuth 2.1 vérifiée");
+    const consentDcr = extraireJetonConsentementHtml(htmlDcr);
+
+    const resPostDcr = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Cookie: cookieMoi,
+        },
+        body: new URLSearchParams({
+          jeton_consentement: consentDcr,
+          decision: "autoriser",
+          response_type: "code",
+          client_id: metaPublic.client_id,
+          redirect_uri: "http://127.0.0.1:54321/oauth-callback",
+          scope: "les_deux",
+          code_challenge: defi,
+          code_challenge_method: "S256",
+          state: "st_dcr",
+        }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resPostDcr.status).toBe(303);
+    const codeDcr = new URL(resPostDcr.headers.get("Location")!).searchParams.get("code")!;
+
+    const resTokenDcr = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: metaPublic.client_id,
+          code: codeDcr,
+          redirect_uri: "http://127.0.0.1:54321/oauth-callback",
+          code_verifier: verifier,
+        }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resTokenDcr.status).toBe(200);
+    const jsonTokenDcr = (await resTokenDcr.json()) as { access_token: string; scope: string };
+    expect(jsonTokenDcr.scope).toBe("les_deux");
+
+    const depot = creerDepotJetonsD1(db);
+    expect(
+      (await resoudreJeton(depot, [jsonTokenDcr.access_token], { service: "legislation" }))
+        ?.titulaireId,
+    ).toBe("tit_oauth_dcr");
+
+    const jetonLigne = await db
+      .prepare("SELECT libelle FROM jeton WHERE titulaire_id = 'tit_oauth_dcr' LIMIT 1")
+      .first<{ libelle: string }>();
+    expect(jetonLigne?.libelle).toContain("Antigravity IDE");
+    expect(jetonLigne?.libelle).not.toContain("dcr1.");
+
+    // 3. Inscription confidentielle client_secret_post et client_secret_basic
+    for (const methode of ["client_secret_post", "client_secret_basic"] as const) {
+      const resRegConf = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/oauth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_name: `Client ${methode}`,
+            redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+            token_endpoint_auth_method: methode,
+          }),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      );
+      expect(resRegConf.status).toBe(201);
+      const regConf = (await resRegConf.json()) as { client_id: string; client_secret: string };
+      expect(regConf.client_secret.startsWith("dcrsec1.")).toBe(true);
+
+      const urlAuthConf =
+        `https://acces.poirierlavoie.ca/oauth/authorize?` +
+        new URLSearchParams({
+          response_type: "code",
+          client_id: regConf.client_id,
+          redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+          scope: "legislation",
+          code_challenge: defi,
+          code_challenge_method: "S256",
+        }).toString();
+      const consentConf = extraireJetonConsentementHtml(
+        await (
+          await app.fetch(
+            new Request(urlAuthConf, { headers: { Cookie: cookieMoi } }),
+            envTest,
+            creerExecutionContextTest(),
+          )
+        ).text(),
+      );
+      const resAuthConf = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookieMoi },
+          body: new URLSearchParams({
+            jeton_consentement: consentConf,
+            decision: "autoriser",
+            response_type: "code",
+            client_id: regConf.client_id,
+            redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+            scope: "legislation",
+            code_challenge: defi,
+            code_challenge_method: "S256",
+          }).toString(),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      );
+      const codeConf = new URL(resAuthConf.headers.get("Location")!).searchParams.get("code")!;
+
+      const headersOk: Record<string, string> = {
+        "Content-Type": "application/x-www-form-urlencoded",
+      };
+      const corpsOk: Record<string, string> = {
+        grant_type: "authorization_code",
+        code: codeConf,
+        redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+        code_verifier: verifier,
+      };
+      if (methode === "client_secret_basic") {
+        headersOk.Authorization = `Basic ${btoa(`${regConf.client_id}:${regConf.client_secret}`)}`;
+      } else {
+        corpsOk.client_id = regConf.client_id;
+        corpsOk.client_secret = regConf.client_secret;
+      }
+
+      // D'abord sans secret -> 401 (avec code intact tant qu'il n'a pas été consommé)
+      const resSansSec = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/oauth/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            client_id: regConf.client_id,
+            code: codeConf,
+            redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+            code_verifier: verifier,
+          }).toString(),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      );
+      expect(resSansSec.status).toBe(401);
+
+      const resConfOk = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/oauth/token", {
+          method: "POST",
+          headers: headersOk,
+          body: new URLSearchParams(corpsOk).toString(),
+        }),
+        envTest,
+        creerExecutionContextTest(),
+      );
+      expect(resConfOk.status, methode).toBe(200);
+    }
+
+    // 4. Titulaire `en_attente` reçoit un message 403 clair mentionnant le Bottin des avocats et outils
+    await db.prepare("UPDATE titulaire SET etat = 'en_attente' WHERE id = 'tit_oauth_dcr'").run();
+    const resAttente = await app.fetch(
+      new Request(urlAuthDcr, { headers: { Cookie: cookieMoi } }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resAttente.status).toBe(403);
+    const htmlAttente = await resAttente.text();
+    expect(htmlAttente).toContain("Bottin des avocats");
+    expect(htmlAttente).toContain("outils");
   });
 });

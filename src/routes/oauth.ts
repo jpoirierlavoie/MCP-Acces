@@ -41,6 +41,7 @@ import {
   sansBarresFinales,
   tropDeRequetes,
   validerMetadonneesClientCimd,
+  validerMetadonneesInscriptionDcr,
   verifierDefiPkceS256,
 } from "@poirierlavoie/mcp-socle";
 import { DUREE_JETON_OAUTH_SECONDES, RESSOURCES_OAUTH_CONNUES, SERVICES_MCP } from "../constantes";
@@ -48,13 +49,17 @@ import { boutonsEntete, esc, repondrePageHtml } from "../html/gabarit";
 import {
   calculerJetonConsentementOAuth,
   creerIdentifiant,
+  emettreInscriptionDcrSansEtat,
   estCoffreConfigure,
   estOrigineFormulaireValide,
   lireFormulaireBorne,
   lireOctetsBornes,
   MAX_OCTETS_CIMD,
+  MAX_OCTETS_INSCRIPTION_DCR,
   repondreMethodeNonPermise,
   validerCheminRetourInterne,
+  verifierAuthentificationClientDcr,
+  verifierClientDcrSansEtat,
   verifierJetonConsentementOAuth,
 } from "../securite";
 import type { ContextePortail } from "../types";
@@ -63,7 +68,7 @@ import { resoudreSessionMoiActive } from "./moi";
 interface ClientOAuthResolu {
   readonly clientId: string;
   readonly libelle: string;
-  readonly source: "preinscrit" | "cimd";
+  readonly source: "preinscrit" | "cimd" | "dcr";
   readonly empreinteSecret: string | null;
   readonly porteesPermises: readonly string[] | "toutes";
 }
@@ -127,13 +132,15 @@ function rendreErreurLocaleAuthorize(statut: number, message: string, method?: s
 
 type PrevalidationClientSansReseau =
   | { readonly ok: true; readonly mode: "preinscrit"; readonly client: ClientOAuthResolu }
+  | { readonly ok: true; readonly mode: "dcr"; readonly client: ClientOAuthResolu }
   | { readonly ok: true; readonly mode: "cimd_en_attente" }
   | { readonly ok: false; readonly message: string };
 
 /**
- * Étape 1 hors réseau : vérifie les clients pré-inscrits en D1 ou la conformité syntaxique
- * anti-SSRF d'un couple `(clientId, redirectUri)` CIMD AVANT tout appel réseau sortant, afin
- * qu'un visiteur non authentifié ne puisse jamais déclencher un `fetch()` externe.
+ * Étape 1 hors réseau : vérifie les clients pré-inscrits en D1, les clients DCR sans état signés
+ * HMAC (`dcr1.*`) ou la conformité syntaxique anti-SSRF d'un couple `(clientId, redirectUri)` CIMD
+ * AVANT tout appel réseau sortant, afin qu'un visiteur non authentifié ne puisse jamais déclencher
+ * un `fetch()` externe.
  */
 async function prevaliderClientEtRedirectionSansReseau(
   clientId: string,
@@ -142,11 +149,66 @@ async function prevaliderClientEtRedirectionSansReseau(
 ): Promise<PrevalidationClientSansReseau> {
   if (
     clientId.length === 0 ||
-    clientId.length > 512 ||
+    clientId.length > 2_048 ||
     redirectUri.length === 0 ||
     redirectUri.length > 512
   ) {
     return { ok: false, message: "Paramètres client_id ou redirect_uri manquants." };
+  }
+
+  if (clientId.startsWith("dcr1.")) {
+    const dcr = await verifierClientDcrSansEtat(contexte.env, clientId);
+    if (!dcr) {
+      return {
+        ok: false,
+        message: "Identifiant client OAuth 2.1 dynamique invalide ou non reconnu.",
+      };
+    }
+
+    const urisHttps = dcr.urisRedirection.filter((u) => u.startsWith("https://"));
+    const cheminsBoucle: string[] = [];
+    for (const u of dcr.urisRedirection) {
+      if (
+        u.startsWith("http://127.0.0.1") ||
+        u.startsWith("http://localhost") ||
+        u.startsWith("http://[::1]")
+      ) {
+        try {
+          const chemin = new URL(u).pathname;
+          if (!cheminsBoucle.includes(chemin)) cheminsBoucle.push(chemin);
+        } catch {
+          // Ignoré
+        }
+      }
+    }
+
+    const uriValide = estUriRedirectionAutorisee(redirectUri, {
+      urisExactesAutorisees: urisHttps,
+      autoriserBoucleLocale: cheminsBoucle.length > 0,
+      ...(cheminsBoucle.length > 0 ? { cheminsBoucleLocale: cheminsBoucle } : {}),
+    });
+    if (!uriValide) {
+      return {
+        ok: false,
+        message: "L'URI de redirection ne correspond à aucune URI inscrite pour ce client.",
+      };
+    }
+
+    return {
+      ok: true,
+      mode: "dcr",
+      client: {
+        clientId,
+        libelle: dcr.libelle,
+        source: "dcr",
+        empreinteSecret: null,
+        porteesPermises: "toutes",
+      },
+    };
+  }
+
+  if (clientId.length > 512) {
+    return { ok: false, message: "Paramètre client_id trop long." };
   }
 
   const preinscrit = await contexte.env.DB_IDENTITE.prepare(
@@ -373,6 +435,7 @@ export function gererDecouverteServeurAutorisation(
     authorizationEndpoint: `${contexte.originePortail}/oauth/authorize`,
     tokenEndpoint: `${contexte.originePortail}/oauth/token`,
     revocationEndpoint: `${contexte.originePortail}/oauth/revoke`,
+    registrationEndpoint: `${contexte.originePortail}/oauth/register`,
     scopesSupported: porteesCanoniques(SERVICES_MCP),
     grantTypesSupported: ["authorization_code"],
     tokenEndpointAuthMethodsSupported: ["none", "client_secret_post", "client_secret_basic"],
@@ -380,6 +443,109 @@ export function gererDecouverteServeurAutorisation(
     serviceDocumentation: `${contexte.originePortail}/gouverne`,
   });
   return repondreServeurAutorisation(request.method, meta);
+}
+
+export async function gererRouteRegister(
+  request: Request,
+  contexte: ContextePortail,
+): Promise<Response> {
+  const origines = originesAdmises(contexte.env.ALLOWED_ORIGINS);
+  if (origineRefusee(request, origines)) {
+    return origineInterdite();
+  }
+  const origin = origineAutorisee(request, origines);
+  if (request.method === "OPTIONS") {
+    return preflight(origin ?? "*");
+  }
+  if (request.method !== "POST") {
+    return methodeNonPermise(origin);
+  }
+
+  const debitOk = await debitAcceptable(contexte.env.RL_OAUTH_IP, contexte.ipClient);
+  if (!debitOk) {
+    return tropDeRequetes(60, origin);
+  }
+
+  if (!estCoffreConfigure(contexte.env)) {
+    return repondreJsonOAuth({ error: "temporarily_unavailable" }, 503, origin);
+  }
+
+  const ct = (request.headers.get("Content-Type") ?? "").toLowerCase();
+  if (!ct.startsWith("application/json")) {
+    return repondreJsonOAuth(
+      {
+        error: "invalid_client_metadata",
+        error_description: "En-tête Content-Type application/json requis.",
+      },
+      415,
+      origin,
+    );
+  }
+
+  const lecture = await lireOctetsBornes(request.body, MAX_OCTETS_INSCRIPTION_DCR);
+  if (!lecture.ok) {
+    return repondreJsonOAuth(
+      {
+        error: "invalid_client_metadata",
+        error_description:
+          lecture.motif === "TROP_GRAND"
+            ? "Corps d'inscription trop volumineux."
+            : "Lecture du corps interrompue.",
+      },
+      lecture.motif === "TROP_GRAND" ? 413 : 400,
+      origin,
+    );
+  }
+
+  let docJson: unknown;
+  try {
+    const texte = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(
+      lecture.octets,
+    );
+    docJson = JSON.parse(texte);
+  } catch {
+    return repondreJsonOAuth(
+      { error: "invalid_client_metadata", error_description: "Corps JSON invalide." },
+      400,
+      origin,
+    );
+  }
+
+  const validation = validerMetadonneesInscriptionDcr(docJson, { autoriserBoucleLocale: true });
+  if (!validation.ok) {
+    return repondreJsonOAuth(
+      { error: validation.codeErreur, error_description: validation.motif },
+      400,
+      origin,
+    );
+  }
+
+  const creeEpochSec = Math.floor(contexte.maintenant().getTime() / 1_000);
+  const emission = await emettreInscriptionDcrSansEtat(
+    contexte.env,
+    validation.client,
+    creeEpochSec,
+  );
+  if (!emission) {
+    return repondreJsonOAuth({ error: "temporarily_unavailable" }, 503, origin);
+  }
+
+  return repondreJsonOAuth(
+    {
+      client_id: emission.clientId,
+      client_id_issued_at: creeEpochSec,
+      ...(emission.jetonAuthClient
+        ? { client_secret: emission.jetonAuthClient, client_secret_expires_at: 0 }
+        : {}),
+      ...(validation.client.clientName ? { client_name: validation.client.clientName } : {}),
+      redirect_uris: [...validation.client.redirectUris],
+      grant_types: [...validation.client.grantTypes],
+      response_types: [...validation.client.responseTypes],
+      token_endpoint_auth_method: validation.client.tokenEndpointAuthMethod,
+    },
+    201,
+    origin,
+  );
 }
 
 export async function gererRouteAuthorize(
@@ -451,6 +617,13 @@ export async function gererRouteAuthorize(
   }
 
   if (!estEtatServi(session.titulaire.etat)) {
+    if (session.titulaire.etat === "en_attente") {
+      return rendreErreurLocaleAuthorize(
+        403,
+        "Votre demande d'accès et votre clé API CanLII sont confirmées. Votre dossier est en attente de vérification manuelle au Bottin des avocats avant l'activation des connecteurs législation (lois) et jurisprudence (juris). Le connecteur public outils demeure utilisable immédiatement.",
+        request.method,
+      );
+    }
     return rendreErreurLocaleAuthorize(
       403,
       `Votre compte est présentement à l'état « ${session.titulaire.etat} » et ne peut pas autoriser un client OAuth.`,
@@ -460,7 +633,7 @@ export async function gererRouteAuthorize(
 
   // 3. Résolution complète du client (avec fetch CIMD anti-SSRF uniquement maintenant que le titulaire est authentifié)
   let client: ClientOAuthResolu;
-  if (prevalidation.mode === "preinscrit") {
+  if (prevalidation.mode === "preinscrit" || prevalidation.mode === "dcr") {
     client = prevalidation.client;
   } else {
     const cimdRes = await resoudreDocumentCimdDistant(clientId, redirectUri, contexte);
@@ -565,11 +738,20 @@ export async function gererRouteAuthorize(
         ? "http:"
         : origineRedirection;
 
+    const badgeSourceClient =
+      client.source === "cimd"
+        ? "métadonnées CIMD vérifiées"
+        : client.source === "dcr"
+          ? "inscription dynamique OAuth 2.1 vérifiée (sans état)"
+          : "client pré-inscrit";
+    const identifiantAffiche =
+      client.source === "dcr" ? "inscription-dynamique-rfc7591" : client.clientId;
+
     const corps = `<header><div class="bar"><h1>Autorisation OAuth 2.1</h1>${boutonsEntete(false)}</div><p class="m">Connecté en tant que <strong>Me ${esc(session.titulaire.nom)}</strong> (<code>${esc(session.titulaire.courriel)}</code>)</p></header>
 <div class="carte">
 <h2>Accorder l'accès à « ${esc(client.libelle)} » ?</h2>
 <ul>
-<li>Identifiant du client : <code>${esc(client.clientId)}</code> (${client.source === "cimd" ? "métadonnées CIMD vérifiées" : "client pré-inscrit"})</li>
+<li>Identifiant du client : <code>${esc(identifiantAffiche)}</code> (${badgeSourceClient})</li>
 <li>Hôte de rappel : <code>${esc(origineRedirection)}</code></li>
 <li>Portée demandée : <strong><code>${esc(portee)}</code></strong></li>
 <li>Protection : PKCE <code>S256</code> vérifié</li>
@@ -681,7 +863,7 @@ function extraireAuthBasicClient(request: Request):
     .trim()
     .replace(/^Basic\s+/i, "")
     .trim();
-  if (b64.length === 0 || b64.length > 1_024) {
+  if (b64.length === 0 || b64.length > 4_096) {
     return { present: true, ok: false };
   }
   let decodeUtf8: string;
@@ -797,6 +979,35 @@ async function authentifierClientEndpointOAuth(
       return { ok: false, reponse: repondreClientInvalide(origin, basic.present) };
     }
     return { ok: true, clientId: "" };
+  }
+
+  if (clientId.startsWith("dcr1.")) {
+    const dcr = await verifierClientDcrSansEtat(contexte.env, clientId);
+    if (!dcr) {
+      return { ok: false, reponse: repondreClientInvalide(origin, basic.present) };
+    }
+    if (dcr.methodeAuth === "none") {
+      if (aFourniSecret) {
+        return { ok: false, reponse: repondreClientInvalide(origin, basic.present) };
+      }
+    } else if (dcr.methodeAuth === "client_secret_basic") {
+      if (
+        !basic.present ||
+        !basic.ok ||
+        !(await verifierAuthentificationClientDcr(contexte.env, clientId, candidatsSecret))
+      ) {
+        return { ok: false, reponse: repondreClientInvalide(origin, true) };
+      }
+    } else {
+      if (
+        basic.present ||
+        candidatsSecret.length === 0 ||
+        !(await verifierAuthentificationClientDcr(contexte.env, clientId, candidatsSecret))
+      ) {
+        return { ok: false, reponse: repondreClientInvalide(origin, basic.present) };
+      }
+    }
+    return { ok: true, clientId };
   }
 
   const clientPreinscrit = await contexte.env.DB_IDENTITE.prepare(
@@ -998,7 +1209,20 @@ export async function gererRouteToken(
   const expireJetonIso = horodatageIsoUtc(
     new Date(maintenantMs + DUREE_JETON_OAUTH_SECONDES * 1_000),
   );
-  const libelleJeton = `OAuth 2.1 (${clientId.slice(0, 48)})`;
+  let libelleJeton: string;
+  if (clientId.startsWith("dcr1.")) {
+    const dcr = await verifierClientDcrSansEtat(contexte.env, clientId);
+    const nomClient = (dcr?.libelle ?? "Client dynamique").slice(0, 32);
+    let hoteRappel = "rappel";
+    try {
+      hoteRappel = new URL(redirectUri).hostname.slice(0, 20);
+    } catch {
+      // Ignoré
+    }
+    libelleJeton = `OAuth 2.1 (${nomClient} — ${hoteRappel})`.slice(0, 64);
+  } else {
+    libelleJeton = `OAuth 2.1 (${clientId.slice(0, 48)})`;
+  }
 
   await contexte.env.DB_IDENTITE.prepare(
     `INSERT INTO jeton (

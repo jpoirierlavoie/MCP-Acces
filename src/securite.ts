@@ -11,11 +11,14 @@
 import {
   type AnneauMaitresCoffre,
   bearerOf,
+  type ClientDcrValide,
   type EntreeCoffreScellee,
   frapperJeton,
   LONGUEUR_MIN_MAITRE_COFFRE,
+  type MethodeAuthEndpointTokenDcr,
   memeSecret,
   scellerCoffre,
+  validerMetadonneesInscriptionDcr,
 } from "@poirierlavoie/mcp-socle";
 import {
   DUREE_SESSION_EXPLOITANT_SECONDES,
@@ -28,6 +31,7 @@ import type { Env } from "./types";
 
 export const MAX_OCTETS_FORMULAIRE = 16_384;
 export const MAX_OCTETS_CIMD = 32_768;
+export const MAX_OCTETS_INSCRIPTION_DCR = 8_192;
 export const DUREE_CONSENTEMENT_OAUTH_SECONDES = 600;
 
 const NOM_COOKIE_MOI_HTTPS = "__Host-acces_moi";
@@ -550,7 +554,7 @@ export function normaliserValiderFormatCanlii(brut: string | null | undefined): 
  * même origine (aucune URL absolue, aucun `//`, aucun `\`, aucun caractère de contrôle).
  */
 export function validerCheminRetourInterne(brut: string | null | undefined): string | null {
-  if (typeof brut !== "string" || brut.length === 0 || brut.length > 1_500) return null;
+  if (typeof brut !== "string" || brut.length === 0 || brut.length > 4_096) return null;
   for (let i = 0; i < brut.length; i++) {
     const code = brut.charCodeAt(i);
     if (code <= 0x20 || code === 0x7f) return null;
@@ -568,4 +572,160 @@ export function validerCheminRetourInterne(brut: string | null | undefined): str
     return `${u.pathname}${u.search}`;
   }
   return null;
+}
+
+function encoderBase64UrlUtf8(texte: string): string {
+  const octets = new TextEncoder().encode(texte);
+  let binaire = "";
+  for (const o of octets) {
+    binaire += String.fromCharCode(o);
+  }
+  return btoa(binaire).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decoderBase64UrlUtf8(brut: string): string | null {
+  if (!/^[A-Za-z0-9_-]+$/.test(brut) || brut.length % 4 === 1) {
+    return null;
+  }
+  const padLen = (4 - (brut.length % 4)) % 4;
+  const b64 = `${brut.replace(/-/g, "+").replace(/_/g, "/")}${"=".repeat(padLen)}`;
+  try {
+    const binaire = atob(b64);
+    const octets = new Uint8Array(binaire.length);
+    for (let i = 0; i < binaire.length; i++) {
+      octets[i] = binaire.charCodeAt(i);
+    }
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(octets);
+  } catch {
+    return null;
+  }
+}
+
+export interface InscriptionDcrEmise {
+  readonly clientId: string;
+  readonly jetonAuthClient?: string;
+}
+
+export interface ClientDcrVerifie {
+  readonly clientId: string;
+  readonly libelle: string;
+  readonly urisRedirection: readonly string[];
+  readonly methodeAuth: MethodeAuthEndpointTokenDcr;
+}
+
+export async function emettreInscriptionDcrSansEtat(
+  env: Env,
+  client: ClientDcrValide,
+  creeEpochSec: number,
+): Promise<InscriptionDcrEmise | null> {
+  const maitre = lireMaitreInterne(env);
+  if (!maitre) return null;
+  const charge = JSON.stringify([
+    1,
+    client.clientName ?? "",
+    client.tokenEndpointAuthMethod,
+    client.redirectUris,
+    creeEpochSec,
+  ]);
+  const chargeB64 = encoderBase64UrlUtf8(charge);
+  const sigHex = await signerHmacHex(maitre, "dcr-client-id-v1", chargeB64);
+  const clientId = `dcr1.${chargeB64}.${sigHex}`;
+  if (client.tokenEndpointAuthMethod !== "none") {
+    const jetonAuthClient = `dcrsec1.${await signerHmacHex(maitre, "dcr-client-auth-v1", clientId)}`;
+    return { clientId, jetonAuthClient };
+  }
+  return { clientId };
+}
+
+export async function verifierClientDcrSansEtat(
+  env: Env,
+  clientId: string,
+): Promise<ClientDcrVerifie | null> {
+  const maitre = lireMaitreInterne(env);
+  if (!maitre || !clientId.startsWith("dcr1.") || clientId.length > 2_048) {
+    await memeSecret("0".repeat(64), "0".repeat(64));
+    return null;
+  }
+  const parties = clientId.split(".");
+  if (parties.length !== 3) {
+    await memeSecret("0".repeat(64), "0".repeat(64));
+    return null;
+  }
+  const [prefixe, chargeB64, sigSoumise] = parties;
+  if (
+    prefixe !== "dcr1" ||
+    !chargeB64 ||
+    !sigSoumise ||
+    !/^[A-Za-z0-9_-]+$/.test(chargeB64) ||
+    !/^[0-9a-f]{64}$/.test(sigSoumise)
+  ) {
+    await memeSecret("0".repeat(64), "0".repeat(64));
+    return null;
+  }
+
+  const sigAttendue = await signerHmacHex(maitre, "dcr-client-id-v1", chargeB64);
+  if (!(await memeSecret(sigSoumise, sigAttendue))) {
+    return null;
+  }
+
+  const decode = decoderBase64UrlUtf8(chargeB64);
+  if (!decode) return null;
+  let tuple: unknown;
+  try {
+    tuple = JSON.parse(decode);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(tuple) || tuple.length !== 5 || tuple[0] !== 1) {
+    return null;
+  }
+  const [_, nomBrut, methodeBrute, urisBrutes, creeSec] = tuple;
+  if (typeof creeSec !== "number" || !Number.isInteger(creeSec) || creeSec < 0) {
+    return null;
+  }
+  const validation = validerMetadonneesInscriptionDcr(
+    {
+      ...(typeof nomBrut === "string" && nomBrut.length > 0 ? { client_name: nomBrut } : {}),
+      token_endpoint_auth_method: methodeBrute,
+      redirect_uris: urisBrutes,
+    },
+    { autoriserBoucleLocale: true },
+  );
+  if (!validation.ok) return null;
+
+  let libelle = validation.client.clientName;
+  if (!libelle) {
+    try {
+      libelle = new URL(validation.client.redirectUris[0]!).hostname;
+    } catch {
+      libelle = "Client OAuth 2.1";
+    }
+  }
+
+  return {
+    clientId,
+    libelle,
+    urisRedirection: validation.client.redirectUris,
+    methodeAuth: validation.client.tokenEndpointAuthMethod,
+  };
+}
+
+export async function verifierAuthentificationClientDcr(
+  env: Env,
+  clientId: string,
+  candidatsSoumis: readonly string[],
+): Promise<boolean> {
+  const maitre = lireMaitreInterne(env);
+  if (!maitre || candidatsSoumis.length === 0) {
+    await memeSecret("0".repeat(64), "0".repeat(64));
+    return false;
+  }
+  const attendu = `dcrsec1.${await signerHmacHex(maitre, "dcr-client-auth-v1", clientId)}`;
+  let valide = false;
+  for (const candidat of candidatsSoumis) {
+    if (await memeSecret(candidat, attendu)) {
+      valide = true;
+    }
+  }
+  return valide;
 }

@@ -1,6 +1,6 @@
 # MCP-Acces (`acces.poirierlavoie.ca`)
 
-Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation **OAuth 2.1 + PKCE `S256`** pour les connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), adossé au socle partagé [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.2`) et à la base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
+Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation **OAuth 2.1 + PKCE `S256`** pour les connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), adossé au socle partagé [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.3`) et à la base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
 
 ---
 
@@ -12,7 +12,7 @@ Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API Can
 | `GET/POST /demande` & `/demande/confirmer` | Public (`RL_DEMANDE_IP` `10/min`, `namespace_id` `"1031"`) | Admission préalable régie par `MODE_ADMISSION` (`ferme`, `invitation`, `ouvert`), épreuve en direct de la clé API CanLII (`caseBrowse/fr/`), sas anti-squattage `demande_acces` (30 min), promotion atomique après confirmation du courriel (`noreply@acces.poirierlavoie.ca`) et alerte non bloquante à l'exploitant |
 | `GET/POST /moi` & `/moi/connexion` | Titulaire (lien magique `session_portail`, cookie `__Host-acces_moi` `HttpOnly; Secure; SameSite=Lax` + CSRF HMAC) | Frappe/révocation de jetons `frapperJeton()` (affichés une seule fois, portées `les_deux`, `legislation`, `jurisprudence`), extraits prêts à coller (`.mcp.json`, `mcp_config.json`, `gemini-extension.json`, `claude.ai`, Gemini App/Enterprise `/mcp/oauth`, API Gemini Deep Research + préambule `SAFETY-KERNEL`), épreuve/rotation/retrait immédiat de la clé CanLII, bascule `hybride_permis`, quotas du jour, export JSON et suppression intégrale Loi 25 |
 | `GET/POST /exploitant` | Exploitant (`CONSOLE_TOKEN` à temps constant via `memeSecret`) | File d'admission vérifiée avec badges non bloquants de partage d'`empreinte_clef` de cabinet et capture obligatoire de `note_admission` (*Bottin des avocats*), transitions d'état journalisées en ajout seul dans `registre_gouverne` (`G12`), invitations de cohorte, clients OAuth pré-inscrits et indicateurs d'anomalies sans contenu |
-| `GET /.well-known/oauth-authorization-server`<br>`GET/POST /oauth/authorize`<br>`POST /oauth/token`<br>`POST /oauth/revoke` | Clients OAuth 2.1 (`RL_OAUTH_IP` `60/min`, `namespace_id` `"1032"`) | Serveur d'autorisation OAuth 2.1 (RFC 8414, PKCE `S256` obligatoire, clients pré-inscrits `client_oauth` et résolution CIMD anti-SSRF `redirect: "manual"` + rejet `3xx`, échange atomique à usage unique `code_oauth` émettant un `jeton` D1 standard) |
+| `GET /.well-known/oauth-authorization-server`<br>`POST /oauth/register`<br>`GET/POST /oauth/authorize`<br>`POST /oauth/token`<br>`POST /oauth/revoke` | Clients OAuth 2.1 (`RL_OAUTH_IP` `60/min`, `namespace_id` `"1032"`) | Serveur d'autorisation OAuth 2.1 (RFC 8414, inscription dynamique RFC 7591 sans état signée HMAC sous `COFFRE_MAITRE_V1`, PKCE `S256` obligatoire, clients pré-inscrits `client_oauth` et résolution CIMD anti-SSRF `redirect: "manual"` + rejet `3xx`, échange atomique à usage unique `code_oauth` émettant un `jeton` D1 standard) |
 | `GET /cgu`, `/confidentialite`, `/attestation`, `/conformite`, `/gouverne` | Public (survit au coupe-circuit `MCP_ENABLED`) | Cinq documents de gouvernance, dont `/conformite` (`POLITIQUES_RETENTION_IDENTITE`, `S20`/`G18`) et `/gouverne` (`QUOTAS_ACTIF_PAR_DEFAUT` / `QUOTAS_LIMITE_PAR_DEFAUT`, `S20`) dérivés directement des constantes du code |
 | `scheduled` (`23 7 * * *`) | Interne Cloudflare | Exécution quotidienne des purges indexées de rétention Loi 25 (`purgerRetentionsD1`, `G16`) |
 
@@ -43,7 +43,7 @@ npx.cmd wrangler deploy --dry-run
    npx.cmd wrangler secret put COFFRE_MAITRE_V1
    npx.cmd wrangler secret put CONSOLE_TOKEN
    ```
-4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.2"` une fois l'étiquette `v0.8.2` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
+4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.3"` une fois l'étiquette `v0.8.3` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
    ```powershell
    $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()
    npm.cmd run deploy
