@@ -360,10 +360,10 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const db = await reinitialiserBaseIdentite();
     const boite = creerBoiteCourriel();
     const envInvitation = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "invitation" });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const maintenant = new Date("2026-11-18T12:00:00.000Z");
+    const app = creerAppTest({ fetchExterne: creerFetchSimule(), horloge: () => maintenant });
 
     const codeInvitation = frapperJeton();
-    const maintenant = new Date("2026-11-18T12:00:00.000Z");
     await db
       .prepare(
         `INSERT INTO invitation_acces (id, empreinte_code, courriel_cible, cohorte, cree_le, expire_le, consomme_le, titulaire_id)

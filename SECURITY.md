@@ -19,3 +19,10 @@
 4. **Sessions, cookies `__Host-`, CSRF et CSP stricte à nonce :** Cookies `HttpOnly; Secure; SameSite=Lax|Strict` préfixés `__Host-` en HTTPS, jetons CSRF dérivés par `HMAC-SHA256` liés à la session et vérifiés via `memeSecret`, contrôle `Origin`/`Sec-Fetch-Site`, et politique CSP à nonce cryptographique par réponse (`default-src 'none'`, `frame-ancestors 'none'`, `base-uri 'none'`, zéro actif tiers).
 5. **OAuth 2.1 strict + PKCE `S256` + CIMD anti-SSRF (`G35`, `G36`) :** Validation préalable de `client_id` et `redirect_uri` avant toute redirection, PKCE `S256` obligatoire à temps constant, résolution CIMD avec `redirect: "error"` et rejet de tout littéral IP ou hôte interne, échange atomique à usage unique de `code_oauth`.
 6. **Zéro journalisation de contenu et conformité Loi 25 (`G12`, `G13`, `G16`, `G18`, `G25`, `G37`) :** Aucune table de requêtes (`verifierSchemaSansContenuIdentifiant`), `observability.enabled = false` et `invocation_logs = false`, `registre_gouverne` strictement en ajout seul, export JSON et suppression intégrale en cascade (`supprimerCompteTitulaireD1`) dans `/moi`, et purge quotidienne indexée (`purgerRetentionsD1`).
+
+---
+
+## Gouvernance Git et chaîne d'approvisionnement
+
+- **Rulesets GitHub actifs (`main-integrity`, `immutable-release-tags`, `main-pr-and-ci`) :** Historique linéaire exigé ; suppression et *fast-forward* bloqués sur `main` et sur les étiquettes de version ; contournement administrateur de `main-pr-and-ci` restreint au mode `pull_request` (aucun `push` direct sur `main` ; toute modification passe par Pull Request validée par `CI`, `CodeQL`, `OSV-Scanner` et `Trivy`).
+- **Analyse de secrets et chaîne logistique :** GitHub *Secret Scanning* et *Push Protection* activés (complétés en CI par le balayage `secret` de Trivy), Dependabot (`npm`, `github-actions`), Actions épinglées au SHA complet sous `step-security/harden-runner`, OpenSSF Scorecard et sonde quotidienne de dérive `/health` (`.github/workflows/verifier-deploiement.yml`).
