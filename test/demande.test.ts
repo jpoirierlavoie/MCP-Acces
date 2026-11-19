@@ -200,6 +200,32 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const htmlErreur = await resErreur.text();
     expect(htmlErreur).not.toContain(secretFuitant);
     expect(htmlErreur).toContain("[EXPURGE]");
+
+    // Épreuve CanLII avec `redirect: "manual"` et rejet explicite de toute redirection 3xx sans fuite de clé
+    const appelsCanlii: Array<{ url: string; init?: RequestInit }> = [];
+    const secretRedir = "clef_canlii_redir_protegee_2026";
+    const appRedir = creerAppTest({
+      fetchExterne: creerFetchSimule({
+        appels: appelsCanlii,
+        redirectionCanlii: "https://autre-hote.exemple/vol",
+      }),
+    });
+    const resRedir = await appRedir.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({ clef_canlii: secretRedir }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRedir.status).toBe(400);
+    const htmlRedir = await resRedir.text();
+    expect(htmlRedir).toContain("redirection HTTP inattendue");
+    expect(htmlRedir).not.toContain(secretRedir);
+    expect(boite.messages.length).toBe(0);
+    expect(appelsCanlii).toHaveLength(1);
+    expect(appelsCanlii[0]?.init?.redirect).toBe("manual");
   });
 
   it("empêche le squattage d'un numéro du Barreau avant confirmation courriel, survit au préchargement GET SafeLinks et scelle le coffre (G8, G10)", async () => {

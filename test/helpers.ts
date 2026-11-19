@@ -171,18 +171,22 @@ export function creerFetchSimule(
   options: {
     clefsCanliiValides?: readonly string[];
     erreurReseauCanlii?: string;
+    redirectionCanlii?: string;
     documentsCimd?: Record<string, { statut?: number; redirection?: string; corps?: unknown }>;
     appels?: Array<{ url: string; init?: RequestInit }>;
   } = {},
 ): typeof fetch {
   const valides = new Set(options.clefsCanliiValides ?? [CLEF_CANLII_VALIDE_TEST]);
   return async (entree: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr =
-      typeof entree === "string" ? entree : entree instanceof URL ? entree.toString() : entree.url;
+    const reqValidee = new Request(entree, init);
+    const urlStr = reqValidee.url;
     options.appels?.push({ url: urlStr, init });
 
     const u = new URL(urlStr);
     if (u.origin === "https://api.canlii.org" && u.pathname === "/v1/caseBrowse/fr/") {
+      if (options.redirectionCanlii) {
+        return Response.redirect(options.redirectionCanlii, 302);
+      }
       if (options.erreurReseauCanlii) {
         throw new Error(`${options.erreurReseauCanlii} (${urlStr})`);
       }
@@ -199,9 +203,6 @@ export function creerFetchSimule(
     if (options.documentsCimd && Object.hasOwn(options.documentsCimd, urlStr)) {
       const spec = options.documentsCimd[urlStr]!;
       if (spec.redirection) {
-        if (init?.redirect === "error") {
-          throw new TypeError("redirect mode is set to 'error'");
-        }
         return Response.redirect(spec.redirection, 302);
       }
       return new Response(JSON.stringify(spec.corps ?? {}), {
