@@ -4,7 +4,7 @@
  * - `GET/POST /oauth/authorize` (session `/moi` active vérifiée avant tout appel réseau externe CIMD,
  *   jeton de consentement HMAC liant tous les paramètres de la requête OAuth, PKCE `S256` obligatoire,
  *   `normaliserPorteeOAuth`, clients pré-inscrits `client_oauth` et résolution CIMD anti-SSRF
- *   `fetch(clientId, { redirect: "error" })` + `validerMetadonneesClientCimd`, égalité stricte
+ *   `fetch(clientId, { redirect: "manual" })` avec rejet explicite des réponses `3xx` + `validerMetadonneesClientCimd`, égalité stricte
  *   `estUriRedirectionAutorisee`, compatibilité CSP `form-action` IPv6 `[::1]`) ;
  * - `POST /oauth/token` (`RL_OAUTH_IP` `60/min` `namespace_id` `"1032"`, validation RFC 8707 `resource`,
  *   consommation atomique immédiate à usage unique de `code_oauth`, révocation sur rejeu de code et
@@ -242,7 +242,7 @@ async function prevaliderClientEtRedirectionSansReseau(
 
 /**
  * Étape 2 réseau (exécutée UNIQUEMENT après authentification d'un titulaire servi) :
- * récupère et valide le document CIMD distant avec `redirect: "error"` (`G36`).
+ * récupère et valide le document CIMD distant avec `redirect: "manual"` et rejet explicite des réponses `3xx` (`G36`).
  */
 async function resoudreDocumentCimdDistant(
   clientId: string,
@@ -253,7 +253,7 @@ async function resoudreDocumentCimdDistant(
   try {
     reponseCimd = await contexte.fetchExterne(clientId, {
       method: "GET",
-      redirect: "error",
+      redirect: "manual",
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(5_000),
     });
@@ -261,11 +261,25 @@ async function resoudreDocumentCimdDistant(
     return {
       ok: false,
       message:
-        "Impossible de récupérer le document de métadonnées client (redirection refusée ou délai dépassé).",
+        "Impossible de récupérer le document de métadonnées client (erreur réseau ou délai dépassé).",
+    };
+  }
+
+  if (
+    String(reponseCimd.type) === "opaqueredirect" ||
+    reponseCimd.redirected ||
+    (reponseCimd.status >= 300 && reponseCimd.status < 400)
+  ) {
+    await reponseCimd.body?.cancel().catch(() => undefined);
+    return {
+      ok: false,
+      message:
+        "Impossible de récupérer le document de métadonnées client (redirection HTTP refusée).",
     };
   }
 
   if (!reponseCimd.ok) {
+    await reponseCimd.body?.cancel().catch(() => undefined);
     return {
       ok: false,
       message: `Le serveur de métadonnées client a répondu HTTP ${reponseCimd.status}.`,

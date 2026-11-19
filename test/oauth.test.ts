@@ -543,7 +543,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resCimdSansSession.headers.get("Location")).toMatch(/^\/moi\?retour=/);
     expect(appelsExternes).toHaveLength(0);
 
-    // 4. G36 : redirection HTTP sur un client CIMD bloquée par `redirect: "error"`
+    // 4. G36 : redirection HTTP sur un client CIMD bloquée par `redirect: "manual"` + rejet `3xx`
     const resCimdRedir = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -560,7 +560,9 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       creerExecutionContextTest(),
     );
     expect(resCimdRedir.status).toBe(400);
-    expect(appelsExternes[0]?.init?.redirect).toBe("error");
+    expect(appelsExternes[0]?.init?.redirect).toBe("manual");
+    expect(appelsExternes).toHaveLength(1);
+    expect(await resCimdRedir.text()).toContain("redirection HTTP refusée");
 
     // 5. Client CIMD valide accepté (avec paramètre RFC 8707 `resource` -> portée implicite `jurisprudence`)
     const resCimdOk = await app.fetch(

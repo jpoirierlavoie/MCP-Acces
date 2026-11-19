@@ -55,12 +55,26 @@ export async function eprouverClefCanliiEnDirect(
   try {
     const res = await fetchFn(url, {
       method: "GET",
-      redirect: "error",
+      // `workerd` ne prend en charge que `"follow"` et `"manual"` ; `"manual"` empêche toute redirection de fuiter `?api_key=`.
+      redirect: "manual",
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
     });
 
+    if (
+      String(res.type) === "opaqueredirect" ||
+      res.redirected ||
+      (res.status >= 300 && res.status < 400)
+    ) {
+      await res.body?.cancel().catch(() => undefined);
+      return {
+        ok: false,
+        categorie: "indisponible",
+        messagePublic: `L'API CanLII a renvoyé une redirection HTTP inattendue (statut ${res.status || "3xx"}) qui a été refusée.`,
+      };
+    }
     if (res.status === 401 || res.status === 403) {
+      await res.body?.cancel().catch(() => undefined);
       return {
         ok: false,
         categorie: "refusee",
@@ -69,6 +83,7 @@ export async function eprouverClefCanliiEnDirect(
       };
     }
     if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
       return {
         ok: false,
         categorie: "indisponible",

@@ -150,6 +150,10 @@ describe("G9, G10, G12 & G33 — Gardes statiques du code source", () => {
       expect(nu, `${chemin} viole G12 (DELETE registre_gouverne)`).not.toMatch(
         /\bDELETE\s+FROM\s+["`[]?registre_gouverne\b/i,
       );
+      expect(
+        nu,
+        `${chemin} ne doit pas utiliser redirect: "error" (non pris en charge par workerd)`,
+      ).not.toMatch(/\bredirect\s*:\s*["']error["']/);
     }
 
     for (const sql of [migration0001, migration0002]) {
