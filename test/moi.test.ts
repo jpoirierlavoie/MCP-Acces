@@ -741,7 +741,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       mcpServers: Record<string, Record<string, unknown>>;
     };
     expect(geminiJson.name).toBe("droit-civil-quebecois");
-    expect(geminiJson.version).toBe("3.0.0");
+    expect(geminiJson.version).toBe("3.0.1");
     expect(geminiJson.description).toContain("Connecteurs « lois », « juris » et « outils »");
     expect(geminiJson.contextFileName).toEqual([]);
     for (const expVar of ["MCP_LEGISLATION_SECRET", "MCP_JURISPRUDENCE_SECRET"]) {
