@@ -1,6 +1,6 @@
 # MCP-Acces (`acces.poirierlavoie.ca`)
 
-Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation **OAuth 2.1 + PKCE `S256`** pour les connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), adossé au socle partagé [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.0`) et à la base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
+Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation **OAuth 2.1 + PKCE `S256`** pour les connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), adossé au socle partagé [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.2`) et à la base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
 
 ---
 
@@ -43,7 +43,7 @@ npx.cmd wrangler deploy --dry-run
    npx.cmd wrangler secret put COFFRE_MAITRE_V1
    npx.cmd wrangler secret put CONSOLE_TOKEN
    ```
-4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.0"` une fois l'étiquette `v0.8.0` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
+4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.2"` une fois l'étiquette `v0.8.2` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
    ```powershell
    $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()
    npm.cmd run deploy

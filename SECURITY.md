@@ -1,6 +1,6 @@
 # Security, Privacy & Professional Secrecy Policy / Politique de sécurité, confidentialité et secret professionnel
 
-> **Français :** Ce dépôt contient `MCP-Acces` (`https://acces.poirierlavoie.ca`), le Worker Cloudflare d'admission, de coffre chiffré CanLII et de serveur d'autorisation OAuth 2.1 adossé à [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.0`) et à la base D1 `mcp-identite`, avec zéro dépendance d'exécution (`dependencies` absente).
+> **Français :** Ce dépôt contient `MCP-Acces` (`https://acces.poirierlavoie.ca`), le Worker Cloudflare d'admission, de coffre chiffré CanLII et de serveur d'autorisation OAuth 2.1 adossé à [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.2`) et à la base D1 `mcp-identite`, avec zéro dépendance d'exécution (`dependencies` absente).
 > Pour signaler une **vulnérabilité de sécurité** OU un **enjeu de vie privée, de confidentialité ou de secret professionnel / privilège**, **n'ouvrez jamais d'issue publique sur GitHub** — écrivez directement à :
 > **Jason Poirier Lavoie, avocat (Québec)** — `jason@poirierlavoie.ca` (accusé de réception sous **72 heures**, divulgation coordonnée).
 > **Ne joignez jamais** de documents clients confidentiels, de communications privilégiées ni de jetons/clés actifs à un premier message ; utilisez des scénarios synthétiques.

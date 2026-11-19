@@ -79,7 +79,7 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(taille).toBeGreaterThan(1_000);
     expect(taille).toBeLessThan(24_000);
     expect(geminiMd).toContain("# MCP-Acces");
-    expect(geminiMd).toContain("#v0.8.0");
+    expect(geminiMd).toContain("#v0.8.2");
   });
 
   it("LICENSE conserve CC-BY-NC-SA-4.0 et l'autorisation bilingue de pratique professionnelle", () => {
