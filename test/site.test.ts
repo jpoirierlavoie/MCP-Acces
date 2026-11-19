@@ -79,6 +79,7 @@ describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () =>
         "/moi",
         "/moi/connexion",
         "/exploitant",
+        "/oauth/register",
         "/oauth/authorize",
         "/oauth/token",
         "/oauth/revoke",

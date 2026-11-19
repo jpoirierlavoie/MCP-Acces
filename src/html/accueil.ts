@@ -117,18 +117,20 @@ ${h2("connecteurs")}
 ${biP(
   [
     "Les connecteurs prennent en charge deux montures complémentaires sur le même registre de 32 " +
-      "outils : la monture directe /mcp (jeton opaque Bearer, ?key= ou segment de chemin, refus " +
-      "uniforme 404 sans oracle) pour Claude Code, Claude Desktop, Google Antigravity, Gemini CLI, " +
-      "claude.ai et l'API Gemini Deep Research, ainsi que la monture /mcp/oauth (OAuth 2.1 + PKCE " +
-      "S256 obligatoire, RFC 9728 / RFC 8414) pour Gemini App, Vertex AI Gemini Enterprise et " +
-      "Claude Research multilocataire.",
+      "outils : la monture OAuth 2.1 par défaut /mcp/oauth (PKCE S256 obligatoire, RFC 9728 / " +
+      "RFC 8414 et inscription dynamique RFC 7591 sans état) permet l'auto-connexion sans clé " +
+      "manuelle dans Claude Code, Claude Desktop, claude.ai, Google Antigravity, Gemini CLI, " +
+      "Gemini App et Vertex AI Gemini Enterprise, tandis que la monture directe /mcp (jeton opaque " +
+      "Bearer, ?key= ou segment de chemin, refus uniforme 404 sans oracle) demeure active pour " +
+      "l'exécution automatisée sans navigateur (CLI/CI) et l'API Gemini Deep Research.",
   ],
   [
-    "The connectors support two complementary mounts over the same 32-tool registry: the direct /mcp " +
-      "mount (opaque Bearer, ?key=, or path token, uniform 404 refusal with zero oracle) for Claude " +
-      "Code, Claude Desktop, Google Antigravity, Gemini CLI, claude.ai, and Gemini API Deep Research, " +
-      "and the /mcp/oauth mount (mandatory OAuth 2.1 + PKCE S256, RFC 9728 / RFC 8414) for Gemini " +
-      "App, Vertex AI Gemini Enterprise, and multi-tenant Claude Research.",
+    "The connectors support two complementary mounts over the same 32-tool registry: the default " +
+      "OAuth 2.1 mount /mcp/oauth (mandatory PKCE S256, RFC 9728 / RFC 8414, and stateless " +
+      "RFC 7591 dynamic client registration) enables zero-config auto-connection in Claude Code, " +
+      "Claude Desktop, claude.ai, Google Antigravity, Gemini CLI, Gemini App, and Vertex AI Gemini " +
+      "Enterprise, while the direct /mcp mount (opaque Bearer, ?key=, or path token, uniform 404 " +
+      "refusal with zero oracle) remains active for headless CLI/CI automation and Gemini API Deep Research.",
   ],
 )}
 </section>

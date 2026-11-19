@@ -6,8 +6,8 @@
  * - admission préalable `/demande` et `/demande/confirmer` ;
  * - console libre-service `/moi` et `/moi/connexion` ;
  * - console d'exploitation `/exploitant` ;
- * - serveur d'autorisation OAuth 2.1 (`/.well-known/oauth-authorization-server`, `/oauth/authorize`,
- *   `/oauth/token`, `/oauth/revoke`) ;
+ * - serveur d'autorisation OAuth 2.1 (`/.well-known/oauth-authorization-server`, `/oauth/register`,
+ *   `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`) ;
  * - tâche planifiée quotidienne `scheduled` exécutant `purgerRetentionsD1` (`G16`).
  *
  * Aucune URL de requête ni aucun secret n'est jamais journalisé (`G9`).
@@ -29,6 +29,7 @@ import { gererRouteConnexionMoi, gererRouteMoi } from "./routes/moi";
 import {
   gererDecouverteServeurAutorisation,
   gererRouteAuthorize,
+  gererRouteRegister,
   gererRouteRevoke,
   gererRouteToken,
 } from "./routes/oauth";
@@ -121,6 +122,9 @@ export function creerGestionnaireAcces(options: OptionsGestionnaireAcces = {}) {
       }
       if (pathname === "/exploitant") {
         return await gererRouteExploitant(request, url, contexte);
+      }
+      if (pathname === "/oauth/register") {
+        return await gererRouteRegister(request, contexte);
       }
       if (pathname === "/oauth/authorize") {
         return await gererRouteAuthorize(request, url, contexte);

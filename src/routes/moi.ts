@@ -194,13 +194,11 @@ function construireExtraitsClientsHtml(originePortail: string): string {
       mcpServers: {
         lois: {
           type: "http",
-          url: "https://legislation.poirierlavoie.ca/mcp",
-          headers: { Authorization: varLois },
+          url: "https://legislation.poirierlavoie.ca/mcp/oauth",
         },
         juris: {
           type: "http",
-          url: "https://jurisprudence.poirierlavoie.ca/mcp",
-          headers: { Authorization: varJuris },
+          url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
           type: "http",
@@ -216,28 +214,10 @@ function construireExtraitsClientsHtml(originePortail: string): string {
     {
       mcpServers: {
         lois: {
-          url: "https://legislation.poirierlavoie.ca/mcp",
-          headers: { Authorization: varLois },
-          variables: [
-            {
-              name: "MCP_LEGISLATION_SECRET",
-              title: "Jeton MCP Législation",
-              description:
-                "Jeton personnel de l'instance MCP Législation (https://legislation.poirierlavoie.ca/mcp), transmis dans l'en-tête Authorization: Bearer.",
-            },
-          ],
+          url: "https://legislation.poirierlavoie.ca/mcp/oauth",
         },
         juris: {
-          url: "https://jurisprudence.poirierlavoie.ca/mcp",
-          headers: { Authorization: varJuris },
-          variables: [
-            {
-              name: "MCP_JURISPRUDENCE_SECRET",
-              title: "Jeton MCP Jurisprudence",
-              description:
-                "Jeton personnel de l'instance MCP Jurisprudence (https://jurisprudence.poirierlavoie.ca/mcp), transmis dans l'en-tête Authorization: Bearer.",
-            },
-          ],
+          url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
           url: "https://outils.poirierlavoie.ca/mcp",
@@ -251,37 +231,43 @@ function construireExtraitsClientsHtml(originePortail: string): string {
   const geminiExtensionJson = JSON.stringify(
     {
       name: "droit-civil-quebecois",
-      version: "3.0.1",
+      version: "3.1.0",
       description:
         "Recherche, analyse, rédaction, administration du litige et déontologie en droit civil et commercial québécois. Connecteurs « lois », « juris » et « outils ».",
       contextFileName: [],
-      settings: [
-        {
-          name: "Jeton MCP Législation",
-          description:
-            "Jeton personnel de l'instance MCP Législation (https://legislation.poirierlavoie.ca/mcp), transmis dans l'en-tête Authorization: Bearer.",
-          envVar: "MCP_LEGISLATION_SECRET",
-          sensitive: true,
-        },
-        {
-          name: "Jeton MCP Jurisprudence",
-          description:
-            "Jeton personnel de l'instance MCP Jurisprudence (https://jurisprudence.poirierlavoie.ca/mcp), transmis dans l'en-tête Authorization: Bearer.",
-          envVar: "MCP_JURISPRUDENCE_SECRET",
-          sensitive: true,
-        },
-      ],
+      settings: [],
       mcpServers: {
         lois: {
-          httpUrl: "https://legislation.poirierlavoie.ca/mcp",
-          headers: { Authorization: varLois },
+          httpUrl: "https://legislation.poirierlavoie.ca/mcp/oauth",
         },
         juris: {
-          httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp",
-          headers: { Authorization: varJuris },
+          httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
           httpUrl: "https://outils.poirierlavoie.ca/mcp",
+        },
+      },
+    },
+    null,
+    2,
+  );
+
+  const mcpBearerJson = JSON.stringify(
+    {
+      mcpServers: {
+        lois: {
+          type: "http",
+          url: "https://legislation.poirierlavoie.ca/mcp",
+          headers: { Authorization: varLois },
+        },
+        juris: {
+          type: "http",
+          url: "https://jurisprudence.poirierlavoie.ca/mcp",
+          headers: { Authorization: varJuris },
+        },
+        outils: {
+          type: "http",
+          url: "https://outils.poirierlavoie.ca/mcp",
         },
       },
     },
@@ -320,20 +306,20 @@ interaction = client.interactions.create(
 
   return `<section id="configurations">
 <h2>Configurations clientes prêtes à coller</h2>
-<p class="m">Un jeton de portée <code>les_deux</code> peut alimenter à la fois <code>MCP_LEGISLATION_SECRET</code> et <code>MCP_JURISPRUDENCE_SECRET</code>. Pour une maîtrise locale zéro-connaissance, l'en-tête optionnel <code>X-Clef-CanLII</code> peut également être transmis à <code>juris</code> sur <code>/mcp</code>.</p>
+<p class="m">Depuis la version <code>3.1.0</code>, <code>.mcp.json</code>, <code>mcp_config.json</code> et <code>gemini-extension.json</code> utilisent OAuth 2.1 (<code>/mcp/oauth</code>) sans clé à coller. Pour les environnements sans navigateur ou l'API Gemini Deep Research, la monture directe <code>/mcp</code> (jeton <code>Bearer</code> de portée <code>les_deux</code> ou <code>?key=</code>, et en-tête optionnel <code>X-Clef-CanLII</code> sur <code>juris</code>) demeure active.</p>
 
 <details>
-<summary>1. Claude Code et Claude Desktop (<code>.mcp.json</code>)</summary>
+<summary>1. Claude Code et Claude Desktop (<code>.mcp.json</code> — OAuth 2.1 sans configuration)</summary>
 <pre><code>${esc(mcpJson)}</code></pre>
 </details>
 
 <details>
-<summary>2. Google Antigravity (<code>mcp_config.json</code>)</summary>
+<summary>2. Google Antigravity (<code>mcp_config.json</code> — OAuth 2.1 sans configuration)</summary>
 <pre><code>${esc(antigravityJson)}</code></pre>
 </details>
 
 <details>
-<summary>3. Gemini CLI (<code>gemini-extension.json</code>)</summary>
+<summary>3. Gemini CLI (<code>gemini-extension.json</code> — OAuth 2.1 sans configuration)</summary>
 <pre><code>${esc(geminiExtensionJson)}</code></pre>
 </details>
 
@@ -361,6 +347,12 @@ Serveur d'autorisation  : ${esc(originePortail)}/.well-known/oauth-authorization
 <p class="m">L'exécution autonome <code>background=True</code> impose <code>store=True</code> et n'injecte pas automatiquement <code>skills/</code> : anonymisez intégralement la question et conservez le préambule <code>SAFETY-KERNEL</code> ci-dessous en tête de <code>input</code> (puis appelez <code>delete</code> sur l'interaction si souhaité).</p>
 <pre><code>${esc(deepResearchPy)}</code></pre>
 </details>
+
+<details>
+<summary>7. Mode sans navigateur / CLI / CI (jeton <code>Bearer</code> direct sur <code>/mcp</code>)</summary>
+<p class="m">Pour les scripts automatisés sans flux OAuth interactif. Un jeton de portée <code>les_deux</code> peut alimenter à la fois <code>MCP_LEGISLATION_SECRET</code> et <code>MCP_JURISPRUDENCE_SECRET</code> ; l'en-tête optionnel <code>X-Clef-CanLII</code> peut également être transmis à <code>juris</code> sur <code>/mcp</code>.</p>
+<pre><code>${esc(mcpBearerJson)}</code></pre>
+</details>
 </section>`;
 }
 
@@ -386,7 +378,13 @@ function rendrePageConnexionMoi(params: {
 <p>Si un compte admissible est associé à cette adresse professionnelle, un lien de connexion à usage unique (valable ${DUREE_LIEN_PORTAIL_MINUTES}&nbsp;minutes) vient d'être envoyé depuis <code>noreply@acces.poirierlavoie.ca</code>.</p>
 </div>`;
   } else {
-    contenu = `${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
+    const banniereOAuth = retourPropre?.startsWith("/oauth/authorize")
+      ? `<div class="avert">
+<p><strong>Connexion d'un connecteur OAuth 2.1 en cours :</strong> saisissez l'adresse courriel professionnelle rattachée à votre compte admis pour recevoir votre lien magique et poursuivre l'autorisation automatiquement.</p>
+<p class="m"><strong>Première visite ?</strong> Les membres actifs du Barreau du Québec doivent d'abord <a href="/demande">déposer une demande d'accès préalable (<code>/demande</code>)</a> avec leur clé API CanLII personnelle avant de pouvoir autoriser <code>lois</code> et <code>juris</code>.</p>
+</div>`
+      : "";
+    contenu = `${banniereOAuth}${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
 <form method="POST" action="/moi" class="carte">
 <input type="hidden" name="action" value="demander_lien">
 ${retourPropre ? `<input type="hidden" name="retour" value="${esc(retourPropre)}">` : ""}

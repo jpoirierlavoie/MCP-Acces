@@ -666,19 +666,17 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     const authLois = "Bearer $" + "{MCP_LEGISLATION_SECRET}";
     const authJuris = "Bearer $" + "{MCP_JURISPRUDENCE_SECRET}";
 
-    // 1. Claude Code / Claude Desktop (.mcp.json)
+    // 1. Claude Code / Claude Desktop (.mcp.json — OAuth 2.1 sans configuration)
     const mcpJson = extraireBlocJson(".mcp.json");
     expect(mcpJson).toEqual({
       mcpServers: {
         lois: {
           type: "http",
-          url: "https://legislation.poirierlavoie.ca/mcp",
-          headers: { Authorization: authLois },
+          url: "https://legislation.poirierlavoie.ca/mcp/oauth",
         },
         juris: {
           type: "http",
-          url: "https://jurisprudence.poirierlavoie.ca/mcp",
-          headers: { Authorization: authJuris },
+          url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
           type: "http",
@@ -687,88 +685,66 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       },
     });
 
-    // 2. Google Antigravity (mcp_config.json) — contrat exact de verifier.py (url + headers + variables, sans serverUrl ni eager)
+    // 2. Google Antigravity (mcp_config.json — OAuth 2.1 sans configuration)
     const agyJson = extraireBlocJson("mcp_config.json") as {
       mcpServers: Record<string, Record<string, unknown>>;
     };
-    expect(Object.keys(agyJson.mcpServers).sort()).toEqual(["juris", "lois", "outils"]);
-    for (const [srvName, expUrl, expAuth, expVar] of [
-      ["lois", "https://legislation.poirierlavoie.ca/mcp", authLois, "MCP_LEGISLATION_SECRET"],
-      [
-        "juris",
-        "https://jurisprudence.poirierlavoie.ca/mcp",
-        authJuris,
-        "MCP_JURISPRUDENCE_SECRET",
-      ],
-    ] as const) {
-      const srv = agyJson.mcpServers[srvName]!;
-      expect(Object.keys(srv).sort()).toEqual(["headers", "url", "variables"]);
-      expect(srv.url).toBe(expUrl);
-      expect(srv).not.toHaveProperty("serverUrl");
-      expect(srv).not.toHaveProperty("eager");
-      expect(srv.headers).toEqual({ Authorization: expAuth });
-      const vars = srv.variables as Array<{ name: string; title: string; description: string }>;
-      expect(Array.isArray(vars)).toBe(true);
-      expect(vars.length).toBeGreaterThanOrEqual(1);
-      expect(
-        vars.some(
-          (v) =>
-            v.name === expVar &&
-            typeof v.title === "string" &&
-            v.title.trim().length > 0 &&
-            typeof v.description === "string" &&
-            v.description.trim().length > 0,
-        ),
-      ).toBe(true);
-    }
-    expect(agyJson.mcpServers.outils).toEqual({
-      url: "https://outils.poirierlavoie.ca/mcp",
+    expect(agyJson).toEqual({
+      mcpServers: {
+        lois: {
+          url: "https://legislation.poirierlavoie.ca/mcp/oauth",
+        },
+        juris: {
+          url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
+        },
+        outils: {
+          url: "https://outils.poirierlavoie.ca/mcp",
+        },
+      },
     });
-    expect(Object.keys(agyJson.mcpServers.outils!)).toEqual(["url"]);
 
-    // 3. Gemini CLI (gemini-extension.json)
+    // 3. Gemini CLI (gemini-extension.json — OAuth 2.1 sans configuration)
     const geminiJson = extraireBlocJson("gemini-extension.json") as {
       name: string;
       version: string;
       description: string;
       contextFileName: unknown[];
-      settings: Array<{
-        name: string;
-        description: string;
-        envVar: string;
-        sensitive: boolean;
-      }>;
+      settings: unknown[];
       mcpServers: Record<string, Record<string, unknown>>;
     };
     expect(geminiJson.name).toBe("droit-civil-quebecois");
-    expect(geminiJson.version).toBe("3.0.1");
+    expect(geminiJson.version).toBe("3.1.0");
     expect(geminiJson.description).toContain("Connecteurs « lois », « juris » et « outils »");
     expect(geminiJson.contextFileName).toEqual([]);
-    for (const expVar of ["MCP_LEGISLATION_SECRET", "MCP_JURISPRUDENCE_SECRET"]) {
-      expect(
-        geminiJson.settings.some(
-          (s) =>
-            s.envVar === expVar &&
-            s.sensitive === true &&
-            typeof s.name === "string" &&
-            s.name.trim().length > 0 &&
-            typeof s.description === "string" &&
-            s.description.trim().length > 0,
-        ),
-      ).toBe(true);
-    }
+    expect(geminiJson.settings).toEqual([]);
     expect(geminiJson.mcpServers).toEqual({
       lois: {
-        httpUrl: "https://legislation.poirierlavoie.ca/mcp",
-        headers: { Authorization: authLois },
+        httpUrl: "https://legislation.poirierlavoie.ca/mcp/oauth",
       },
       juris: {
-        httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp",
-        headers: { Authorization: authJuris },
+        httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
       },
       outils: {
         httpUrl: "https://outils.poirierlavoie.ca/mcp",
       },
     });
+
+    // Mode sans navigateur / CLI / CI (Bearer /mcp) toujours documenté
+    expect(htmlMoi).toContain("Mode sans navigateur / CLI / CI");
+    expect(htmlMoi).toContain(authLois);
+    expect(htmlMoi).toContain(authJuris);
+
+    // Encadré d'accueil /demande lorsque /moi est appelé depuis /oauth/authorize
+    const resConnexionOAuth = await app.fetch(
+      new Request(
+        "https://acces.poirierlavoie.ca/moi?retour=%2Foauth%2Fauthorize%3Fclient_id%3Dclaude-web",
+      ),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConnexionOAuth.status).toBe(200);
+    const htmlConnexionOAuth = await resConnexionOAuth.text();
+    expect(htmlConnexionOAuth).toContain('href="/demande"');
+    expect(htmlConnexionOAuth).toContain("Connexion d'un connecteur OAuth 2.1 en cours");
   });
 });
