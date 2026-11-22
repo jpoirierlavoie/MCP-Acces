@@ -80,7 +80,8 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(taille).toBeGreaterThan(1_000);
     expect(taille).toBeLessThan(24_000);
     expect(geminiMd).toContain("# MCP-Acces");
-    expect(geminiMd).toContain("#v0.8.3");
+    expect(geminiMd).toContain("#v0.8.4");
+    expect(geminiMd).not.toContain("#v0.8.3");
     expect(geminiMd).not.toContain("#v0.8.2");
   });
 
