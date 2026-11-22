@@ -15,3 +15,4 @@
 .dev.vars.example text eol=lf
 CODEOWNERS      text eol=lf
 LICENSE         text eol=lf
+NOTICE          text eol=lf

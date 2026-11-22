@@ -44,7 +44,7 @@ npx.cmd wrangler deploy --dry-run
    npx.cmd wrangler secret put COFFRE_MAITRE_V1
    npx.cmd wrangler secret put CONSOLE_TOKEN
    ```
-4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.3"` une fois l'étiquette `v0.8.3` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
+4. Basculer `@poirierlavoie/mcp-socle` vers `"github:jpoirierlavoie/MCP-Socle#v0.8.4"` une fois l'étiquette `v0.8.4` poussée sur GitHub, puis déployer (migrations D1 d'abord, puis Worker) :
    ```powershell
    $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()
    npm.cmd run deploy
