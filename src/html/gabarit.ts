@@ -1,6 +1,6 @@
 /**
  * Gabarit HTML et identité visuelle partagée (`acces.poirierlavoie.ca`), alignée sur les
- * connecteurs jumeaux `MCP-Legislation` et `MCP-Jurisprudence` :
+ * connecteurs jumeaux `MCP-Legislation`, `MCP-Jurisprudence` et `MCP-Outils` :
  * - typographie Georgia, thèmes `CLAIR` / `SOMBRE` strictement symétriques, zéro couleur en dur ;
  * - bascule bilingue `FR · EN` sans requête et bascule de thème à trois états (`auto`, `light`, `dark`) ;
  * - politique CSP stricte à nonce cryptographique par réponse (`script-src 'nonce-...'`), zéro actif tiers,
@@ -21,14 +21,14 @@ export function esc(s: string): string {
 
 /** Élément en ligne bilingue (`FR` + `EN` émis simultanément, filtrés en CSS). */
 export function bi(fr: string, en: string): string {
-  return `<span data-l="fr">${esc(fr)}</span><span data-l="en">${esc(en)}</span>`;
+  return `<span data-l="fr">${esc(fr)}</span><span data-l="en" lang="en">${esc(en)}</span>`;
 }
 
 /** Suite de paragraphes bilingues. */
 export function biP(fr: readonly string[], en: readonly string[]): string {
   return (
-    `<div data-l="fr">${fr.map((p) => `<p>${esc(p)}</p>`).join("")}</div>` +
-    `<div data-l="en">${en.map((p) => `<p>${esc(p)}</p>`).join("")}</div>`
+    `<div data-l="fr">${fr.map((p) => `<p>${esc(p)}</p>`).join("")}</div>\n` +
+    `<div data-l="en" lang="en">${en.map((p) => `<p>${esc(p)}</p>`).join("")}</div>`
   );
 }
 
@@ -39,12 +39,12 @@ export interface SectionSommaire {
 }
 
 const CLAIR =
-  "--f:#111;--m:#666;--b:#e2e0da;--a:#7a2e1d;--bg:#fdfcfa;--card:#fff;" +
+  "color-scheme:light;--f:#111;--m:#666;--b:#e2e0da;--a:#7a2e1d;--bg:#fdfcfa;--card:#fff;" +
   "--th:#f7f5f1;--code:#f2efe9;--hover:#faf8f4;--avert-bg:#fbf7f1;--avert-b:#e6d9c6;" +
   "--ok-bg:#f2f8f3;--ok-b:#b7d6bd;--err-bg:#fcf2f1;--err-b:#e3b4ae";
 
 const SOMBRE =
-  "--f:#e8e6e1;--m:#a09a90;--b:#3a372f;--a:#e08b6a;--bg:#16150f;--card:#1e1c16;" +
+  "color-scheme:dark;--f:#e8e6e1;--m:#a09a90;--b:#3a372f;--a:#e08b6a;--bg:#16150f;--card:#1e1c16;" +
   "--th:#252219;--code:#252219;--hover:#242118;--avert-bg:#211d15;--avert-b:#3d3527;" +
   "--ok-bg:#17241a;--ok-b:#2f5236;--err-bg:#291816;--err-b:#5c302b";
 
@@ -52,7 +52,16 @@ const LARGE = "78rem";
 const SOLEIL = "☀︎";
 const FLECHE = "↑︎";
 
-const CSS = `
+function compacterBloc(code: string): string {
+  return code
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .map((l) => l.replace(/^\s*\/\/.*$/, "").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+const CSS = compacterBloc(`
 :root{${CLAIR}}
 @media(prefers-color-scheme:dark){:root{${SOMBRE}}}
 html.t-light{${CLAIR}}
@@ -74,7 +83,20 @@ code{font:.9em ui-monospace,Menlo,Consolas,monospace;background:var(--code);padd
 pre{background:var(--code);border:1px solid var(--b);border-radius:6px;padding:.7rem .9rem;
   overflow-x:auto;font-size:.84rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 pre code{background:none;padding:0}
-
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.saut{position:fixed;left:1rem;top:1rem;z-index:20;padding:.45rem .85rem;background:var(--card);
+  color:var(--a);border:2px solid var(--a);border-radius:6px;font-weight:700;text-decoration:none}
+.saut:not(:focus-visible){position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;border:0}
+.suite{display:flex;align-items:center;justify-content:space-between;gap:.5rem 1rem;flex-wrap:wrap;
+  margin:0 0 1rem;padding:0 0 .65rem;border-bottom:1px solid var(--b);font-size:.88rem}
+.suite-t{font-weight:700;color:var(--m);letter-spacing:.02em}
+.suite ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.35rem}
+.suite li{margin:0}
+.suite a{display:inline-block;padding:.28rem .65rem;border:1px solid transparent;border-radius:999px;
+  color:var(--m);text-decoration:none;min-height:1.75rem}
+.suite a:hover{color:var(--a);border-color:var(--b);background:var(--card)}
+.suite a[aria-current=page]{color:var(--a);font-weight:700;border-color:var(--a);background:var(--card)}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .btns{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 #bascule,#theme,.btn-sec{font:inherit;font-size:.82rem;letter-spacing:.03em;background:var(--card);
@@ -86,22 +108,22 @@ pre code{background:none;padding:0}
 html:not(.t-light):not(.t-dark) #theme [data-t=auto],
 html.t-light #theme [data-t=light],
 html.t-dark #theme [data-t=dark]{display:inline}
-
 .btn{font:inherit;font-size:.92rem;font-weight:700;background:var(--a);color:var(--bg);
   border:1px solid var(--a);border-radius:6px;padding:.5rem 1.1rem;cursor:pointer;text-decoration:none;
   display:inline-block}
 .btn:hover{opacity:.92}
 .btn-danger{font:inherit;font-size:.85rem;background:var(--err-bg);color:var(--f);
   border:1px solid var(--err-b);border-radius:6px;padding:.4rem .85rem;cursor:pointer}
-
 .m{color:var(--m);font-size:.86rem}
+.grille-cartes{display:grid;grid-template-columns:repeat(auto-fit,minmax(16.5rem,1fr));gap:.85rem;margin:1rem 0}
+.grille-cartes .carte{margin:0;display:flex;flex-direction:column;justify-content:space-between}
 .carte{border:1px solid var(--b);border-radius:6px;background:var(--card);padding:1rem 1.2rem;margin:1rem 0}
+.carte h3{margin-top:0}
 .avert{background:var(--avert-bg);border:1px solid var(--avert-b);border-radius:6px;padding:.6rem 1.1rem;margin:1rem 0}
 .ok{background:var(--ok-bg);border:1px solid var(--ok-b);border-radius:6px;padding:.6rem 1.1rem;margin:1rem 0}
 .err{background:var(--err-bg);border:1px solid var(--err-b);border-radius:6px;padding:.6rem 1.1rem;margin:1rem 0}
 .badge{display:inline-block;font-size:.78rem;padding:.1rem .5rem;border-radius:999px;
   border:1px solid var(--avert-b);background:var(--avert-bg);color:var(--f)}
-
 .champ{margin:.85rem 0}
 .champ label{display:block;font-weight:700;margin-bottom:.25rem;font-size:.93rem}
 .champ input[type=text],.champ input[type=email],.champ input[type=password],.champ select,.champ textarea{
@@ -110,14 +132,12 @@ html.t-dark #theme [data-t=dark]{display:inline}
 .champ textarea{max-width:44rem;min-height:4.5rem}
 .case{display:flex;gap:.55rem;align-items:flex-start;margin:.65rem 0}
 .case input{margin-top:.3rem}
-
 .tw{overflow-x:auto;border:1px solid var(--b);border-radius:6px;background:var(--card);margin:.75rem 0}
 table{border-collapse:collapse;width:100%;font-size:.88rem}
 th,td{padding:.5rem .7rem;text-align:left;border-bottom:1px solid var(--b);vertical-align:top}
 th{background:var(--th);position:sticky;top:0}
 td.n,th.n{text-align:right;white-space:nowrap}
 tbody tr:hover{background:var(--hover)}
-
 .tdm{max-width:60rem;width:100%;justify-self:center}
 .tdm ul{list-style:none;margin:.5rem 0 0;padding:0;font-size:.85rem}
 .tdm li{margin:.15rem 0}
@@ -127,7 +147,6 @@ tbody tr:hover{background:var(--hover)}
 details{border:1px solid var(--b);border-radius:6px;background:var(--card);margin:.6rem 0;padding:.6rem .9rem}
 summary{cursor:pointer;font-weight:700}
 footer{margin-top:3.5rem;padding-top:1.25rem;border-top:2px solid var(--b);font-size:.9rem;color:var(--m)}
-
 .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
   clip-path:inset(50%);white-space:nowrap;border:0}
 .haut{position:fixed;right:1.25rem;bottom:1.25rem;z-index:10;width:2.6rem;height:2.6rem;
@@ -140,6 +159,9 @@ html.js .haut.on{opacity:1;visibility:visible}
   html{scroll-behavior:smooth}
   .haut{transition:opacity .2s,visibility .2s,color .2s,border-color .2s}
 }
+@media(forced-colors:active){
+  .suite a[aria-current=page],.tdm a.on{outline:2px solid Highlight}
+}
 html.l-fr [data-l=en],html.l-en [data-l=fr]{display:none}
 @media(min-width:${LARGE}){
   .wrap.avec-tdm{grid-template-columns:13rem minmax(0,60rem);gap:2.5rem;align-items:start}
@@ -148,10 +170,10 @@ html.l-fr [data-l=en],html.l-en [data-l=fr]{display:none}
     max-height:calc(100vh - 4rem);overflow:auto}
   .wrap.avec-tdm .tdm>summary{display:none}
 }
-`;
+`);
 
 // biome-ignore lint/complexity/noUselessStringRaw: parade délibérée contre la perte d'antislash
-const BOOT = String.raw`
+const BOOT = compacterBloc(String.raw`
 try{
   var r=document.documentElement, c=[];
   var p=localStorage.getItem('accesLang')||(navigator.language||'fr').slice(0,2);
@@ -160,16 +182,16 @@ try{
   if(t==='light'||t==='dark') c.push('t-'+t);
   r.className=c.join(' ');
 }catch(e){}
-`;
+`);
 
-const BOOT_FR_SEUL = `
+const BOOT_FR_SEUL = compacterBloc(`
 try{
   var r=document.documentElement, c=['l-fr'];
   var t=localStorage.getItem('accesTheme');
   if(t==='light'||t==='dark') c.push('t-'+t);
   r.className=c.join(' ');
 }catch(e){}
-`;
+`);
 
 const JS = `
 (function(){
@@ -236,10 +258,10 @@ const JS = `
 })();
 `;
 
-function jsClient(): string {
+const JS_COMPACTE = (() => {
   if (!JS.includes("LARGEUR")) throw new Error("jeton LARGEUR absent du JS client");
-  return JS.replace("LARGEUR", LARGE);
-}
+  return compacterBloc(JS.replace("LARGEUR", LARGE));
+})();
 
 function etatTheme(t: string, fr: string, en: string, bilingue: boolean): string {
   return `<span data-t="${t}">${bilingue ? bi(fr, en) : esc(fr)}</span>`;
@@ -253,13 +275,36 @@ export function boutonsEntete(bilingue: boolean): string {
   return `<div class="btns">${boutonTheme}${boutonLangue}</div>`;
 }
 
+/** Barre de navigation inter-connecteurs de la suite `Droit civil québécois`. */
+export function barreSuite(bilingue: boolean, estAccueil = false): string {
+  const txt = (fr: string, en: string) => (bilingue ? bi(fr, en) : esc(fr));
+  const attrAccueil = estAccueil ? ' aria-current="page"' : "";
+  return `<nav class="suite" aria-labelledby="suite-t">
+<span id="suite-t" class="sr">${txt("Suite Droit civil québécois", "Québec Civil Law suite")}</span>
+<span class="suite-t">${txt("Droit civil québécois", "Québec Civil Law")}</span>
+<ul>
+<li><a href="/"${attrAccueil}>${txt("Accès", "Access")}</a></li>
+<li><a href="https://legislation.poirierlavoie.ca/">${txt("Législation", "Legislation")}</a></li>
+<li><a href="https://jurisprudence.poirierlavoie.ca/">${txt("Jurisprudence", "Case Law")}</a></li>
+<li><a href="https://outils.poirierlavoie.ca/">${txt("Outils", "Tools")}</a></li>
+</ul>
+</nav>`;
+}
+
+function rendreSautContenu(bilingue: boolean): string {
+  const libelle = bilingue
+    ? bi("Aller au contenu principal", "Skip to main content")
+    : esc("Aller au contenu principal");
+  return `<a href="#contenu-principal" class="saut">${libelle}</a>`;
+}
+
 function rendreSommaire(sections: readonly SectionSommaire[]): string {
   const items = sections
     .map((s) => `<li><a href="#${esc(s.id)}">${bi(s.fr, s.en)}</a></li>`)
     .join("");
   return `<details class="tdm" open>
-<summary>${bi("Sommaire", "Contents")}</summary>
-<nav><ul>${items}</ul></nav>
+<summary id="tdm-t">${bi("Sommaire", "Contents")}</summary>
+<nav aria-labelledby="tdm-t"><ul>${items}</ul></nav>
 </details>`;
 }
 
@@ -283,6 +328,8 @@ export interface OptionsPageHtml {
   readonly cachePublicMaxAge?: number;
   readonly referrerPolicy?: "no-referrer" | "same-origin" | "strict-origin-when-cross-origin";
   readonly entetesSupplementaires?: Record<string, string>;
+  readonly urlCanonique?: string;
+  readonly jsonLd?: Record<string, unknown>;
 }
 
 /**
@@ -327,6 +374,20 @@ export function repondrePageHtml(options: OptionsPageHtml): Response {
     return new Response(null, { status: statut, headers });
   }
 
+  const metaDecouverte = options.urlCanonique
+    ? `\n<link rel="canonical" href="${esc(options.urlCanonique)}">` +
+      `\n<meta property="og:type" content="website">` +
+      `\n<meta property="og:title" content="${esc(options.titrePage)}">` +
+      `\n<meta property="og:description" content="${esc(options.descriptionMeta)}">` +
+      `\n<meta property="og:url" content="${esc(options.urlCanonique)}">` +
+      `\n<meta property="og:locale" content="fr_CA">` +
+      (bilingue ? `\n<meta property="og:locale:alternate" content="en_CA">` : "")
+    : "";
+
+  const blocJsonLd = options.jsonLd
+    ? `\n<script type="application/ld+json" nonce="${nonce}">${JSON.stringify(options.jsonLd).replace(/</g, "\\u003c")}</script>`
+    : "";
+
   const avecTdm = options.sections !== undefined && options.sections.length > 0;
   const html = `<!doctype html>
 <html lang="fr" class="l-fr">
@@ -334,19 +395,20 @@ export function repondrePageHtml(options: OptionsPageHtml): Response {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(options.titrePage)}</title>
-<meta name="description" content="${esc(options.descriptionMeta)}">
-<style>${CSS}</style>
+<meta name="description" content="${esc(options.descriptionMeta)}">${metaDecouverte}
+<style>${CSS}</style>${blocJsonLd}
 <script nonce="${nonce}">${bilingue ? BOOT : BOOT_FR_SEUL}</script>
 </head>
 <body>
+${rendreSautContenu(bilingue)}
 <div class="wrap${avecTdm ? " avec-tdm" : ""}">
 ${avecTdm ? rendreSommaire(options.sections!) : ""}
-<main>
+<main id="contenu-principal" tabindex="-1">
 ${options.corpsHtml}
 </main>
 </div>
 ${rendrePastilleHaut(bilingue)}
-<script nonce="${nonce}">${jsClient()}</script>
+<script nonce="${nonce}">${JS_COMPACTE}</script>
 </body>
 </html>`;
 

@@ -5,6 +5,7 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
 import { SECTIONS_ACCUEIL } from "../src/html/accueil";
+import { CHEMINS_DECOUVERTE_PUBLIQUE } from "../src/html/decouverte";
 import { CHEMINS_DOCUMENTS_GOUVERNANCE } from "../src/html/gouvernance";
 import worker from "../src/index";
 import {
@@ -33,7 +34,7 @@ async function demander(
   return res;
 }
 
-describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () => {
+describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circuit G22", () => {
   beforeEach(async () => {
     await reinitialiserBaseIdentite();
   });
@@ -63,10 +64,13 @@ describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () =>
     }
   });
 
-  it("G22 : MCP_ENABLED !== 'true' coupe toutes les routes opérationnelles mais préserve GET / et les 5 documents publics", async () => {
+  it("G22 : MCP_ENABLED !== 'true' coupe toutes les routes opérationnelles mais préserve GET /, la découverte et les 5 documents publics", async () => {
     for (const valeurCoupe of ["false", "", undefined]) {
       const envCoupe = creerEnvTest({ MCP_ENABLED: valeurCoupe });
       expect((await demander("/", { env: envCoupe })).status).toBe(200);
+      for (const dec of CHEMINS_DECOUVERTE_PUBLIQUE) {
+        expect((await demander(dec, { env: envCoupe })).status, dec).toBe(200);
+      }
       for (const doc of CHEMINS_DOCUMENTS_GOUVERNANCE) {
         expect((await demander(doc, { env: envCoupe })).status, doc).toBe(200);
       }
@@ -95,7 +99,41 @@ describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () =>
     expect(await santeOk.json()).toEqual({ status: "ok", commit: "testsha" });
   });
 
-  it("applique une CSP stricte à nonce, zéro CORS, zéro secret, zéro tiers, zéro couleur en dur et parité bilingue", async () => {
+  it("sert /robots.txt, /sitemap.xml et /llms.txt sans secret ni CORS (GET, HEAD, 405)", async () => {
+    for (const chemin of CHEMINS_DECOUVERTE_PUBLIQUE) {
+      const res = await demander(chemin, { headers: { Origin: "https://claude.ai" } });
+      expect(res.status, chemin).toBe(200);
+      expect(res.headers.get("Access-Control-Allow-Origin"), chemin).toBeNull();
+      expect(res.headers.get("X-Content-Type-Options"), chemin).toBe("nosniff");
+
+      const head = await demander(chemin, { method: "HEAD" });
+      expect(head.status, `${chemin} HEAD`).toBe(200);
+      expect(await head.text(), `${chemin} HEAD body`).toBe("");
+
+      const post = await demander(chemin, { method: "POST" });
+      expect(post.status, `${chemin} POST`).toBe(405);
+    }
+
+    const robots = await (await demander("/robots.txt")).text();
+    expect(robots).toContain("Allow: /");
+    expect(robots).toContain("Disallow: /moi");
+    expect(robots).toContain("Disallow: /oauth/");
+    expect(robots).toContain("Sitemap: https://acces.poirierlavoie.ca/sitemap.xml");
+
+    const sitemap = await (await demander("/sitemap.xml")).text();
+    expect(sitemap).toContain("<loc>https://acces.poirierlavoie.ca/</loc>");
+    expect(sitemap).toContain("<loc>https://acces.poirierlavoie.ca/cgu</loc>");
+
+    const llms = await (await demander("/llms.txt")).text();
+    expect(llms).toContain("https://legislation.poirierlavoie.ca/");
+    expect(llms).toContain("https://jurisprudence.poirierlavoie.ca/");
+    expect(llms).toContain("https://outils.poirierlavoie.ca/");
+    expect(llms).toContain(String(QUOTAS_ACTIF_PAR_DEFAUT.local));
+    expect(llms).not.toContain(SECRET_MAITRE_TEST);
+    expect(llms).not.toContain(SECRET_CONSOLE_TEST);
+  });
+
+  it("applique une CSP stricte à nonce, zéro CORS, zéro secret, zéro tiers, zéro id dupliqué, JSON-LD valide et parité bilingue", async () => {
     for (const chemin of ["/", ...CHEMINS_DOCUMENTS_GOUVERNANCE]) {
       const res = await demander(chemin, { headers: { Origin: "https://claude.ai" } });
       expect(res.status, chemin).toBe(200);
@@ -117,6 +155,29 @@ describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () =>
       expect(html).not.toMatch(/<link[^>]+stylesheet/i);
       expect(html).not.toContain("@import");
 
+      // Aucun attribut id="..." dupliqué dans le document
+      const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]!);
+      expect(new Set(ids).size, `${chemin} ids uniques`).toBe(ids.length);
+
+      // Barre de navigation inter-connecteurs et lien d'évitement clavier
+      expect(html, `${chemin} barre suite`).toContain('<nav class="suite"');
+      expect(html, `${chemin} lien lois`).toContain('href="https://legislation.poirierlavoie.ca/"');
+      expect(html, `${chemin} lien juris`).toContain(
+        'href="https://jurisprudence.poirierlavoie.ca/"',
+      );
+      expect(html, `${chemin} lien outils`).toContain('href="https://outils.poirierlavoie.ca/"');
+      expect(html, `${chemin} saut clavier`).toContain('href="#contenu-principal"');
+      expect(html, `${chemin} canonical`).toContain(
+        `<link rel="canonical" href="https://acces.poirierlavoie.ca${chemin}">`,
+      );
+
+      // Schéma JSON-LD valide
+      const ldMatch =
+        /<script type="application\/ld\+json" nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html);
+      expect(ldMatch, `${chemin} JSON-LD`).not.toBeNull();
+      const ld = JSON.parse(ldMatch![1]!) as Record<string, unknown>;
+      expect(ld["@context"]).toBe("https://schema.org");
+
       // Parité bilingue exacte sur les pages publiques
       const fr = (html.match(/data-l="fr"/g) ?? []).length;
       const en = (html.match(/data-l="en"/g) ?? []).length;
@@ -135,14 +196,35 @@ describe("Pages publiques, CSP stricte, bilinguisme et coupe-circuit G22", () =>
     }
 
     const htmlAccueil = await (await demander("/")).text();
+    expect(htmlAccueil).toContain('href="/" aria-current="page"');
+    expect(SECTIONS_ACCUEIL[1]?.id).toBe("connecteurs");
     for (const s of SECTIONS_ACCUEIL) {
       expect(htmlAccueil).toContain(`<a href="#${s.id}"`);
-      expect(htmlAccueil).toContain(`<h2 id="${s.id}"`);
+      expect(htmlAccueil).toContain(`<section id="${s.id}"`);
     }
+
+    // /demande porte la barre de suite, le bilinguisme FR/EN et les attributs autocomplete,
+    // tandis que /moi et /exploitant demeurent épurés sans barre de suite.
+    const htmlDemande = await (
+      await demander("/demande", { env: creerEnvTest({ MODE_ADMISSION: "ouvert" }) })
+    ).text();
+    expect(htmlDemande).toContain('<nav class="suite"');
+    expect(htmlDemande).toContain('autocomplete="name"');
+    expect(htmlDemande).toContain('autocomplete="email"');
+    expect(htmlDemande).toContain('autocomplete="organization"');
+    const frDemande = (htmlDemande.match(/data-l="fr"/g) ?? []).length;
+    const enDemande = (htmlDemande.match(/data-l="en"/g) ?? []).length;
+    expect(frDemande).toBe(enDemande);
+
+    const htmlMoi = await (await demander("/moi")).text();
+    expect(htmlMoi).not.toContain('<nav class="suite"');
+    const htmlExploitant = await (await demander("/exploitant")).text();
+    expect(htmlExploitant).not.toContain('<nav class="suite"');
   });
 
   it("S20 & G18 : /conformite, /gouverne et /cgu reflètent exactement les constantes du code et les clauses requises", async () => {
     const conformiteHtml = await (await demander("/conformite")).text();
+    expect(conformiteHtml).not.toContain('aria-current="page"');
     for (const p of POLITIQUES_RETENTION_IDENTITE) {
       expect(conformiteHtml).toContain(`<code>${p.table}</code>`);
       expect(conformiteHtml).toContain(`<code>${p.purgeCode}</code>`);
