@@ -80,6 +80,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       registration_endpoint: string;
       code_challenge_methods_supported: string[];
       client_id_metadata_document_supported: boolean;
+      authorization_response_iss_parameter_supported: boolean;
       scopes_supported: string[];
     };
     expect(doc.issuer).toBe("https://acces.poirierlavoie.ca");
@@ -89,6 +90,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(doc.registration_endpoint).toBe("https://acces.poirierlavoie.ca/oauth/register");
     expect(doc.code_challenge_methods_supported).toEqual(["S256"]);
     expect(doc.client_id_metadata_document_supported).toBe(true);
+    expect(doc.authorization_response_iss_parameter_supported).toBe(true);
     expect(doc.scopes_supported).toEqual(["les_deux", "jurisprudence", "legislation"]);
   });
 
@@ -862,7 +864,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resRefusUsager.status).toBe(303);
     expect(resRefusUsager.headers.get("Location")).toBe(
-      "http://127.0.0.1:54321/callback?error=access_denied&state=s1",
+      "http://127.0.0.1:54321/callback?error=access_denied&state=s1&iss=https%3A%2F%2Facces.poirierlavoie.ca",
     );
 
     // 3. Client confidentiel : obtenir d'abord le jeton de consentement via GET, puis tester Basic RFC 7617 brut, rejet sans secret, rejet secret sur client public et RFC 8707 resource
@@ -1389,5 +1391,164 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const htmlAttente = await resAttente.text();
     expect(htmlAttente).toContain("Bottin des avocats");
     expect(htmlAttente).toContain("outils");
+  });
+
+  it("prend en charge ChatGPT OAuth 2.1 (CIMD SEP-3149, RFC 9207 iss, filtrage offline_access/OIDC, CORS et DCR grant_types)", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_chatgpt");
+    const chatgptClientId = "https://chatgpt.com/oauth/client.json";
+    const chatgptRedirect = "https://chatgpt.com/connector_platform_oauth_redirect";
+    const sansNoneClientId = "https://sans-none.exemple.org/oauth/client.json";
+
+    const app = creerAppTest({
+      fetchExterne: creerFetchSimule({
+        documentsCimd: {
+          [chatgptClientId]: {
+            corps: {
+              client_id: chatgptClientId,
+              client_name: "ChatGPT",
+              redirect_uris: [chatgptRedirect],
+              token_endpoint_auth_method: "private_key_jwt",
+              token_endpoint_auth_methods_supported: ["none", "private_key_jwt"],
+            },
+          },
+          [sansNoneClientId]: {
+            corps: {
+              client_id: sansNoneClientId,
+              client_name: "Strict Private Key Only",
+              redirect_uris: ["https://sans-none.exemple.org/callback"],
+              token_endpoint_auth_method: "private_key_jwt",
+              token_endpoint_auth_methods_supported: ["private_key_jwt"],
+            },
+          },
+        },
+      }),
+    });
+    const envChatGpt = creerEnvTest({
+      ALLOWED_ORIGINS: "https://chatgpt.com,https://chat.openai.com,https://platform.openai.com",
+    });
+
+    const verifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
+    const defi = await calculerDefiPkceS256(verifier);
+
+    // 1. CIMD avec SEP-3149 (private_key_jwt + none dans supported) + scopes tiers + RFC 8707 resource
+    const urlAuth =
+      `https://acces.poirierlavoie.ca/oauth/authorize?` +
+      new URLSearchParams({
+        response_type: "code",
+        client_id: chatgptClientId,
+        redirect_uri: chatgptRedirect,
+        scope: "legislation offline_access openid profile email",
+        resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
+        code_challenge: defi,
+        code_challenge_method: "S256",
+        state: "cgpt_state_1",
+      }).toString();
+
+    const resGet = await app.fetch(
+      new Request(urlAuth, { headers: { Cookie: cookieMoi } }),
+      envChatGpt,
+      creerExecutionContextTest(),
+    );
+    expect(resGet.status).toBe(200);
+    const htmlConsent = await resGet.text();
+    expect(htmlConsent).toContain("ChatGPT");
+    expect(htmlConsent).toContain("<code>legislation</code>");
+    const jetonConsent = extraireJetonConsentementHtml(htmlConsent);
+
+    const resPost = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", Cookie: cookieMoi },
+        body: new URLSearchParams({
+          jeton_consentement: jetonConsent,
+          decision: "autoriser",
+          response_type: "code",
+          client_id: chatgptClientId,
+          redirect_uri: chatgptRedirect,
+          scope: "legislation",
+          resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
+          code_challenge: defi,
+          code_challenge_method: "S256",
+          state: "cgpt_state_1",
+        }).toString(),
+      }),
+      envChatGpt,
+      creerExecutionContextTest(),
+    );
+    expect(resPost.status).toBe(303);
+    const urlRappel = new URL(resPost.headers.get("Location")!);
+    expect(`${urlRappel.origin}${urlRappel.pathname}`).toBe(chatgptRedirect);
+    expect(urlRappel.searchParams.get("iss")).toBe("https://acces.poirierlavoie.ca");
+    expect(urlRappel.searchParams.get("state")).toBe("cgpt_state_1");
+    const code = urlRappel.searchParams.get("code")!;
+
+    // 2. Échange /oauth/token avec Origin: https://chatgpt.com et scope: offline_access
+    const resToken = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Origin: "https://chatgpt.com",
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: chatgptClientId,
+          code,
+          redirect_uri: chatgptRedirect,
+          code_verifier: verifier,
+          scope: "offline_access",
+          resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
+        }).toString(),
+      }),
+      envChatGpt,
+      creerExecutionContextTest(),
+    );
+    expect(resToken.status).toBe(200);
+    expect(resToken.headers.get("Access-Control-Allow-Origin")).toBe("https://chatgpt.com");
+    const tokenDoc = (await resToken.json()) as { access_token: string; scope: string };
+    expect(tokenDoc.scope).toBe("legislation");
+    expect(tokenDoc.access_token).toHaveLength(43);
+
+    // 3. Rejet de sécurité maintenu si token_endpoint_auth_methods_supported n'inclut pas "none"
+    const resSansNone = await app.fetch(
+      new Request(
+        `https://acces.poirierlavoie.ca/oauth/authorize?` +
+          new URLSearchParams({
+            response_type: "code",
+            client_id: sansNoneClientId,
+            redirect_uri: "https://sans-none.exemple.org/callback",
+            code_challenge: defi,
+            code_challenge_method: "S256",
+          }).toString(),
+        { headers: { Cookie: cookieMoi } },
+      ),
+      envChatGpt,
+      creerExecutionContextTest(),
+    );
+    expect(resSansNone.status).toBe(400);
+
+    // 4. DCR /oauth/register accepte grant_types étendu (jwt-bearer) et restreint à authorization_code
+    const resDcr = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_name: "ChatGPT DCR",
+          redirect_uris: [chatgptRedirect],
+          token_endpoint_auth_method: "none",
+          grant_types: [
+            "authorization_code",
+            "refresh_token",
+            "urn:ietf:params:oauth:grant-type:jwt-bearer",
+          ],
+        }),
+      }),
+      envChatGpt,
+      creerExecutionContextTest(),
+    );
+    expect(resDcr.status).toBe(201);
+    const dcrDoc = (await resDcr.json()) as { grant_types: string[] };
+    expect(dcrDoc.grant_types).toEqual(["authorization_code"]);
   });
 });

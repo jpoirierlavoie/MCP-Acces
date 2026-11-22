@@ -94,8 +94,59 @@ function estStateValide(state: string | null): boolean {
   return true;
 }
 
+const JETONS_PORTEE_TIERS_IGNORES = new Set(["offline_access", "openid", "profile", "email"]);
+
+function filtrerJetonsPorteeTiers(scopeBrut: string | null): string | null {
+  if (scopeBrut === null) return null;
+  if (scopeBrut.length > 512) return scopeBrut;
+  const jetons = scopeBrut
+    .trim()
+    .split(/\s+/)
+    .filter((s) => s.length > 0 && !JETONS_PORTEE_TIERS_IGNORES.has(s));
+  return jetons.length > 0 ? jetons.join(" ") : "";
+}
+
+function clientCimdAcceptePkceSansSecret(
+  docJson: unknown,
+  methodeSinguliere: "none" | "private_key_jwt",
+): boolean {
+  if (methodeSinguliere === "none") return true;
+  if (typeof docJson !== "object" || docJson === null || Array.isArray(docJson)) {
+    return false;
+  }
+  const brut = (docJson as Record<string, unknown>).token_endpoint_auth_methods_supported;
+  if (!Array.isArray(brut) || brut.length === 0 || brut.length > 8) {
+    return false;
+  }
+  return (
+    brut.every((m): m is string => m === "none" || m === "private_key_jwt") && brut.includes("none")
+  );
+}
+
+function normaliserDocInscriptionDcr(docJson: unknown): unknown {
+  if (typeof docJson !== "object" || docJson === null || Array.isArray(docJson)) {
+    return docJson;
+  }
+  const obj = docJson as Record<string, unknown>;
+  const grants = obj.grant_types;
+  if (
+    !Array.isArray(grants) ||
+    grants.length === 0 ||
+    grants.length > 8 ||
+    !grants.every((g): g is string => typeof g === "string") ||
+    !grants.includes("authorization_code")
+  ) {
+    return docJson;
+  }
+  return {
+    ...obj,
+    grant_types: grants.filter((g) => g === "authorization_code" || g === "refresh_token"),
+  };
+}
+
 function construireRedirectionOAuth(
   redirectUri: string,
+  issuer: string,
   parametres: Record<string, string | undefined>,
 ): Response {
   const cible = new URL(redirectUri);
@@ -104,6 +155,7 @@ function construireRedirectionOAuth(
       cible.searchParams.set(cle, valeur);
     }
   }
+  cible.searchParams.set("iss", issuer);
   return new Response(null, {
     status: 303,
     headers: {
@@ -369,7 +421,7 @@ async function resoudreDocumentCimdDistant(
   if (!validation.ok) {
     return { ok: false, message: validation.motif };
   }
-  if (validation.client.tokenEndpointAuthMethod !== "none") {
+  if (!clientCimdAcceptePkceSansSecret(docJson, validation.client.tokenEndpointAuthMethod)) {
     return {
       ok: false,
       message:
@@ -430,7 +482,7 @@ export function gererDecouverteServeurAutorisation(
   request: Request,
   contexte: ContextePortail,
 ): Response {
-  const meta = construireServeurAutorisation({
+  const base = construireServeurAutorisation({
     issuer: contexte.originePortail,
     authorizationEndpoint: `${contexte.originePortail}/oauth/authorize`,
     tokenEndpoint: `${contexte.originePortail}/oauth/token`,
@@ -442,6 +494,10 @@ export function gererDecouverteServeurAutorisation(
     clientIdMetadataDocumentSupported: true,
     serviceDocumentation: `${contexte.originePortail}/gouverne`,
   });
+  const meta = {
+    ...base,
+    authorization_response_iss_parameter_supported: true,
+  } as typeof base;
   return repondreServeurAutorisation(request.method, meta);
 }
 
@@ -511,7 +567,9 @@ export async function gererRouteRegister(
     );
   }
 
-  const validation = validerMetadonneesInscriptionDcr(docJson, { autoriserBoucleLocale: true });
+  const validation = validerMetadonneesInscriptionDcr(normaliserDocInscriptionDcr(docJson), {
+    autoriserBoucleLocale: true,
+  });
   if (!validation.ok) {
     return repondreJsonOAuth(
       { error: validation.codeErreur, error_description: validation.motif },
@@ -647,7 +705,7 @@ export async function gererRouteAuthorize(
 
   const responseType = sourceParams.get("response_type");
   if (responseType !== "code") {
-    return construireRedirectionOAuth(redirectUri, {
+    return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
       error: "unsupported_response_type",
       state: stateParam,
     });
@@ -656,7 +714,7 @@ export async function gererRouteAuthorize(
   const codeChallenge = (sourceParams.get("code_challenge") ?? "").trim();
   const codeChallengeMethod = (sourceParams.get("code_challenge_method") ?? "").trim();
   if (codeChallengeMethod !== METHODE_PKCE_S256 || !MOTIF_DEFI_PKCE.test(codeChallenge)) {
-    return construireRedirectionOAuth(redirectUri, {
+    return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
       error: "invalid_request",
       error_description: "PKCE S256 obligatoire (RFC 7636 / OAuth 2.1).",
       state: stateParam,
@@ -669,7 +727,7 @@ export async function gererRouteAuthorize(
   if (resourceBrut !== null && resourceBrut.trim().length > 0) {
     const cleRes = sansBarresFinales(resourceBrut.trim());
     if (!Object.hasOwn(RESSOURCES_OAUTH_CONNUES, cleRes)) {
-      return construireRedirectionOAuth(redirectUri, {
+      return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
         error: "invalid_target",
         state: stateParam,
       });
@@ -678,7 +736,7 @@ export async function gererRouteAuthorize(
     porteeImpliciteResource = RESSOURCES_OAUTH_CONNUES[cleRes];
   }
 
-  const scopeSaisi = sourceParams.get("scope");
+  const scopeFiltre = filtrerJetonsPorteeTiers(sourceParams.get("scope"));
   const porteeDefautClient =
     client.porteesPermises !== "toutes" &&
     !client.porteesPermises.includes("les_deux") &&
@@ -687,19 +745,19 @@ export async function gererRouteAuthorize(
       : undefined;
 
   const portee = normaliserPorteeOAuth(
-    scopeSaisi !== null && scopeSaisi.trim().length > 0
-      ? scopeSaisi
+    scopeFiltre !== null && scopeFiltre.length > 0
+      ? scopeFiltre
       : (porteeImpliciteResource ?? porteeDefautClient ?? null),
     SERVICES_MCP,
   );
   if (!portee || !verifierPorteeClientPermise(portee, client.porteesPermises)) {
-    return construireRedirectionOAuth(redirectUri, {
+    return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
       error: "invalid_scope",
       state: stateParam,
     });
   }
   if (porteeImpliciteResource && !porteeAutorisee(portee, porteeImpliciteResource)) {
-    return construireRedirectionOAuth(redirectUri, {
+    return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
       error: "invalid_scope",
       state: stateParam,
     });
@@ -801,7 +859,7 @@ ${resourceNormalisee !== null ? `<input type="hidden" name="resource" value="${e
   }
 
   if (sourceParams.get("decision") !== "autoriser") {
-    return construireRedirectionOAuth(redirectUri, {
+    return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
       error: "access_denied",
       state: stateParam,
     });
@@ -831,7 +889,7 @@ ${resourceNormalisee !== null ? `<input type="hidden" name="resource" value="${e
     )
     .run();
 
-  return construireRedirectionOAuth(redirectUri, {
+  return construireRedirectionOAuth(redirectUri, contexte.originePortail, {
     code: codeClair,
     state: stateParam,
   });
@@ -1178,10 +1236,10 @@ export async function gererRouteToken(
 
   // Validation RFC 8707 `resource` et restriction éventuelle de portée (`scope`) sur /oauth/token
   let porteeFinale = codeRow.portee;
-  const scopeTokenBrut = champs.get("scope");
-  const aScopeTokenExplicite = scopeTokenBrut !== null && scopeTokenBrut.trim().length > 0;
+  const scopeTokenFiltre = filtrerJetonsPorteeTiers(champs.get("scope"));
+  const aScopeTokenExplicite = scopeTokenFiltre !== null && scopeTokenFiltre.length > 0;
   if (aScopeTokenExplicite) {
-    const porteeToken = normaliserPorteeOAuth(scopeTokenBrut, SERVICES_MCP);
+    const porteeToken = normaliserPorteeOAuth(scopeTokenFiltre, SERVICES_MCP);
     if (!porteeToken || !verifierSousPorteeAutorisee(porteeToken, codeRow.portee)) {
       return repondreJsonOAuth({ error: "invalid_scope" }, 400, origin);
     }
