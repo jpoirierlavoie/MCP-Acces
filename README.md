@@ -55,4 +55,4 @@ npx.cmd wrangler deploy --dry-run
 ## Sécurité, confidentialité et licence
 
 - **Signalement privé :** Voir [`SECURITY.md`](SECURITY.md) (`jason@poirierlavoie.ca`, accusé de réception sous 72 h).
-- **Licence :** Creative Commons Attribution - Pas d'Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0 International (`CC-BY-NC-SA-4.0`) accompagnée de l'**Autorisation complémentaire de pratique professionnelle du droit** pour les membres actifs en règle du Barreau du Québec — voir [`LICENSE`](LICENSE) et `/cgu`.
+- **Licence :** **Apache-2.0** ([`LICENSE`](LICENSE)) assortie du fichier [`NOTICE`](NOTICE) (création assistée par IA pour l'intérêt public, non-revendication et reconnaissance des sources officielles et données ouvertes dont `CC BY-NC-SA 4.0` REQ/OQLF et CanLII BYOK). Conditions d'usage du service hébergé sur `/cgu`.

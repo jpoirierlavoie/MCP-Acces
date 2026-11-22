@@ -54,7 +54,7 @@ const JSON_LD_ACCUEIL: Record<string, unknown> = {
       applicationCategory: "LegalApplication",
       operatingSystem: "Cross-platform (MCP)",
       isAccessibleForFree: true,
-      license: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      license: "https://www.apache.org/licenses/LICENSE-2.0",
       termsOfService: `${ORIGINE_PORTAIL_PAR_DEFAUT}/cgu`,
       inLanguage: ["fr-CA", "en-CA"],
       author: { "@id": `${ORIGINE_PORTAIL_PAR_DEFAUT}/#operateur` },
@@ -152,19 +152,21 @@ ${biP(
       "strictement réservé aux avocats inscrits actifs et en règle au Tableau de l'Ordre du Barreau " +
       "du Québec. Le connecteur complémentaire MCP Outils (outils — calendrier C.p.c., intérêts " +
       "art. 1619 C.c.Q., greffes, registres et terminologie) demeure public et sans authentification.",
-    "Conformément à l'Autorisation complémentaire de pratique professionnelle du droit accompagnant " +
-      "la licence CC BY-NC-SA 4.0, les membres admis peuvent employer les connecteurs au sein de " +
-      "leurs mandats clients rémunérés, à l'exclusion stricte de toute revente commerciale, offre " +
-      "SaaS ou encapsulation LegalTech.",
+    "Le code source de la suite est publié gratuitement sous licence open source Apache-2.0 " +
+      "(accompagnée du fichier NOTICE reconnaissant les sources officielles et données ouvertes sans " +
+      "revendication de propriété). Les membres admis du Barreau du Québec peuvent utiliser les " +
+      "connecteurs hébergés gratuitement au sein de leur pratique, y compris dans leurs mandats " +
+      "clients, conformément aux /cgu et aux licences propres aux sources desservies.",
   ],
   [
     "Access to the authenticated MCP Legislation (lois) and MCP Case Law (juris) connectors is " +
       "strictly reserved for lawyers actively enrolled in good standing on the Roll of the Barreau " +
       "du Québec. The companion MCP Tools connector (outils — C.C.P. deadlines, art. 1619 C.C.Q. " +
       "interest, court registries, and terminology) remains public and unauthenticated.",
-    "Under the Companion Professional Legal Practice Grant accompanying the CC BY-NC-SA 4.0 license, " +
-      "admitted members may use the connectors within fee-bearing client mandates, strictly excluding " +
-      "any commercial resale, SaaS offering, or LegalTech wrapping.",
+    "The suite's source code is published free of charge under the Apache-2.0 open-source license " +
+      "(with a NOTICE file crediting official and open-data sources without claiming ownership). " +
+      "Admitted Barreau du Québec members may use the hosted connectors free of charge in their " +
+      "practice, including client mandates, in accordance with /cgu and upstream source terms.",
   ],
 )}
 </section>
@@ -310,7 +312,7 @@ ${h2("gouvernance", "h-gouvernance")}
 <th scope="col">${bi("Document public", "Public document")}</th>
 <th scope="col">${bi("Objet", "Purpose")}</th>
 </tr></thead><tbody>
-<tr><td><a href="/cgu"><code>/cgu</code></a></td><td>${bi("Conditions d'utilisation, autorisation de pratique professionnelle, absence de SLA et rétablissement sous 5 jours ouvrables", "Terms of use, professional practice grant, zero SLA, and 5-business-day reinstatement procedure")}</td></tr>
+<tr><td><a href="/cgu"><code>/cgu</code></a></td><td>${bi("Conditions d'utilisation, licence Apache-2.0, usage professionnel, absence de SLA et rétablissement sous 5 jours ouvrables", "Terms of use, Apache-2.0 license, professional use, zero SLA, and 5-business-day reinstatement procedure")}</td></tr>
 <tr><td><a href="/confidentialite"><code>/confidentialite</code></a></td><td>${bi("Politique de confidentialité (Loi 25), responsable des renseignements personnels et droits d'accès/suppression", "Privacy policy (Law 25), privacy officer, and access/erasure rights")}</td></tr>
 <tr><td><a href="/attestation"><code>/attestation</code></a></td><td>${bi("Attestation solennelle d'inscription active au Barreau du Québec et de détention légitime d'une clé API CanLII", "Solemn attestation of active Barreau du Québec enrolment and legitimate CanLII API key holding")}</td></tr>
 <tr><td><a href="/conformite"><code>/conformite</code></a></td><td>${bi("Fiche technique de conformité dérivée du code : sous-traitants, chiffrement et inventaire des 11 tables D1", "Code-derived compliance sheet: sub-processors, encryption, and 11-table D1 retention inventory")}</td></tr>
@@ -324,11 +326,11 @@ ${h2("gouvernance", "h-gouvernance")}
 <footer>
 ${biP(
   [
-    "Jason Poirier Lavoie, avocat (Québec). Licence CC BY-NC-SA 4.0 + Autorisation complémentaire de pratique professionnelle du droit.",
+    "Jason Poirier Lavoie, avocat (Québec). Code source sous licence Apache-2.0 (voir LICENSE et NOTICE) · Conditions du service hébergé : /cgu.",
     "Aucun conseil juridique. Ces connecteurs ne remplacent ni la vérification à la source, ni le jugement professionnel.",
   ],
   [
-    "Jason Poirier Lavoie, Lawyer (Québec). CC BY-NC-SA 4.0 License + Companion Professional Legal Practice Grant.",
+    "Jason Poirier Lavoie, Lawyer (Québec). Source code licensed under Apache-2.0 (see LICENSE and NOTICE) · Hosted service terms: /cgu.",
     "Not legal advice. These connectors replace neither primary-source verification nor professional judgment.",
   ],
 )}

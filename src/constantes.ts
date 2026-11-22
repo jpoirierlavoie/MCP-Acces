@@ -12,7 +12,7 @@ export type ServiceMcp = (typeof SERVICES_MCP)[number];
 export const USAGE_COFFRE_CANLII = "canlii";
 export const VERSION_COFFRE_COURANTE = 1;
 
-export const VERSION_CGU = "2026-11-18";
+export const VERSION_CGU = "2026-11-22";
 export const VERSION_CONFIDENTIALITE = "2026-11-18";
 export const VERSION_ATTESTATION = "2026-11-18";
 

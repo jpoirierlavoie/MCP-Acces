@@ -67,34 +67,40 @@ ${barreNavigationPublique()}
 </header>
 
 <section id="pratique">
-<h2>${bi("1. Licence CC BY-NC-SA 4.0 et Autorisation complémentaire de pratique professionnelle du droit", "1. CC BY-NC-SA 4.0 License & Companion Professional Legal Practice Grant")}</h2>
+<h2>${bi("1. Licence logicielle ouverte (Apache-2.0), respect des sources officielles (NOTICE) et usage du service hébergé", "1. Open-Source Software License (Apache-2.0), Respect for Official Sources (NOTICE) & Hosted Service Use")}</h2>
 ${biP(
   [
-    "Le code source de l'infrastructure MCP (MCP-Socle, MCP-Acces, MCP-Legislation, MCP-Jurisprudence, " +
-      "MCP-Outils et le greffon droit-civil-quebecois) est publié sous licence Creative Commons " +
-      "Attribution - Pas d'Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0 International " +
-      "(identifiant SPDX : CC-BY-NC-SA-4.0).",
-    "Conformément aux sections 6(c) et 7(b) de la licence CC BY-NC-SA 4.0, le concédant (Jason Poirier " +
-      "Lavoie, avocat) accorde séparément et à titre gratuit aux membres actifs en règle inscrits au " +
-      "Tableau de l'Ordre du Barreau du Québec (ainsi qu'aux membres de leur cabinet agissant sous leur " +
-      "supervision professionnelle directe) l'autorisation d'utiliser ces logiciels et les connecteurs " +
-      "hébergés dans le cours normal de l'exercice professionnel du droit, y compris au sein de mandats " +
-      "clients rémunérés.",
-    "Demeurent strictement interdits sans entente écrite distincte : toute revente commerciale, " +
-      "sous-licence payante, offre logicielle commerciale (« SaaS » ou « LegalTech »), encapsulation " +
-      "tarifée, moissonnage de masse ou redistribution contre rémunération à des tiers.",
+    "Le code source de la suite (MCP-Socle, MCP-Acces, MCP-Legislation, MCP-Jurisprudence, MCP-Outils et " +
+      "le greffon droit-civil-quebecois), élaboré en grande partie avec l'assistance de l'intelligence " +
+      "artificielle, est publié gratuitement pour l'intérêt public sous la licence Apache 2.0 " +
+      "(identifiant SPDX : Apache-2.0 ; voir LICENSE et NOTICE).",
+    "La licence Apache-2.0 porte exclusivement sur les logiciels, schémas et documents originaux des " +
+      "dépôts. Aucun droit d'auteur ni statut officiel n'est revendiqué sur les textes juridiques, la " +
+      "jurisprudence ou les données ouvertes desservis à l'exécution (LégisQuébec, Justice Canada, " +
+      "QCCS/QCCQ/AMF, CanLII BYOK, REQ et OQLF sous CC BY-NC-SA 4.0, RBQ/OPC/RENA/RQA sous CC BY 4.0, " +
+      "TERMIUM Plus® sous OGL-Canada, Revenu Québec et MJQ), lesquels demeurent régis par les conditions " +
+      "de leurs éditeurs respectifs décrites dans NOTICE.",
+    "Les membres actifs en règle du Barreau du Québec admis sur le présent portail (et les membres de " +
+      "leur cabinet agissant sous leur supervision) sont autorisés à titre gratuit à employer les " +
+      "connecteurs hébergés dans l'exercice de leur profession, y compris dans leurs mandats clients " +
+      "rémunérés. Demeurent interdits : tout moissonnage automatisé en masse, tout partage d'identifiants " +
+      "et toute revente ou exploitation commerciale du service hébergé ou des données tierces non commerciales.",
   ],
   [
-    "The MCP infrastructure source code (MCP-Socle, MCP-Acces, MCP-Legislation, MCP-Jurisprudence, " +
-      "MCP-Outils, and the droit-civil-quebecois plugin) is published under the Creative Commons " +
-      "Attribution-NonCommercial-ShareAlike 4.0 International License (SPDX: CC-BY-NC-SA-4.0).",
-    "Pursuant to Sections 6(c) and 7(b) of CC BY-NC-SA 4.0, the Licensor (Jason Poirier Lavoie, Lawyer) " +
-      "separately and gratuitously grants active members in good standing of the Barreau du Québec " +
-      "(and supervised members of their firm) permission to use this software and the hosted connectors " +
-      "in the ordinary course of practising law, including within fee-bearing client mandates.",
-    "Strictly prohibited without a separate written agreement: any commercial resale, paid sublicensing, " +
-      "commercial SaaS or LegalTech wrapping, fee-gated hosting, bulk harvesting, or commercial " +
-      "redistribution to third parties.",
+    "The suite's source code (MCP-Socle, MCP-Acces, MCP-Legislation, MCP-Jurisprudence, MCP-Outils, and " +
+      "the droit-civil-quebecois plugin), developed with substantial AI assistance, is published free of " +
+      "charge for the public benefit under the Apache License, Version 2.0 (SPDX: Apache-2.0; see LICENSE " +
+      "and NOTICE).",
+    "Apache-2.0 applies solely to the original software, schemas, and documentation in the repositories. " +
+      "Zero copyright or official status is claimed over third-party statutes, case law, or open datasets " +
+      "served at runtime (LégisQuébec, Justice Canada, QCCS/QCCQ/AMF, CanLII BYOK, REQ and OQLF under " +
+      "CC BY-NC-SA 4.0, RBQ/OPC/RENA/RQA under CC BY 4.0, TERMIUM Plus® under OGL-Canada, Revenu Québec, " +
+      "and MJQ), which remain governed by each publisher's terms documented in NOTICE.",
+    "Admitted active members in good standing of the Barreau du Québec (and supervised firm members) " +
+      "are authorized free of charge to use the hosted connectors in the ordinary course of practising " +
+      "law, including fee-bearing client mandates. Bulk automated harvesting, credential sharing, and any " +
+      "commercial resale or commercial wrapping of the hosted service or non-commercial upstream data remain " +
+      "prohibited.",
   ],
 )}
 </section>
@@ -168,7 +174,7 @@ ${piedDocument()}`;
   return {
     titre: "Conditions générales d'utilisation — MCP Accès",
     titreEn: "Terms of Use — MCP Access",
-    desc: "Conditions d'utilisation, autorisation de pratique professionnelle du droit, absence de SLA et procédure de rétablissement.",
+    desc: "Conditions d'utilisation, licence Apache-2.0, respect des sources officielles, absence de SLA et procédure de rétablissement.",
     corps,
   };
 }

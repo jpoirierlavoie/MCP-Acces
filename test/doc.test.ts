@@ -10,6 +10,7 @@ import geminiMd from "../GEMINI.md?raw";
 import licenseRaw from "../LICENSE?raw";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_clients_oauth_initiaux.sql?raw";
+import noticeRaw from "../NOTICE?raw";
 import osvTomlRaw from "../osv-scanner.toml?raw";
 import pkgRaw from "../package.json?raw";
 import readmeMd from "../README.md?raw";
@@ -49,7 +50,7 @@ function parserJsonc(brut: string): Record<string, unknown> {
 }
 
 describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
-  it("package.json déclare mcp-acces, licence CC-BY-NC-SA-4.0 et zéro dépendance d'exécution", () => {
+  it("package.json déclare mcp-acces, licence Apache-2.0 et zéro dépendance d'exécution", () => {
     const pkg = JSON.parse(pkgRaw) as {
       name: string;
       license: string;
@@ -57,7 +58,7 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
       scripts?: Record<string, string>;
     };
     expect(pkg.name).toBe("mcp-acces");
-    expect(pkg.license).toBe("CC-BY-NC-SA-4.0");
+    expect(pkg.license).toBe("Apache-2.0");
     expect(Object.keys(pkg.dependencies ?? {})).toEqual([]);
     expect(pkg.scripts?.["type-check"]).toBe("tsc --noEmit");
     expect(pkg.scripts?.lint).toBe("biome check .");
@@ -83,13 +84,13 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(geminiMd).not.toContain("#v0.8.2");
   });
 
-  it("LICENSE conserve CC-BY-NC-SA-4.0 et l'autorisation bilingue de pratique professionnelle", () => {
-    expect(licenseRaw).toContain("SPDX Identifier: CC-BY-NC-SA-4.0");
-    expect(licenseRaw).toContain(
-      "AUTORISATION COMPLÉMENTAIRE DE PRATIQUE PROFESSIONNELLE DU DROIT",
-    );
-    expect(licenseRaw).toContain("COMPANION PROFESSIONAL LEGAL PRACTICE GRANT");
-    expect(licenseRaw).toContain("Attribution-NonCommercial-ShareAlike 4.0 International");
+  it("LICENSE conserve Apache-2.0 et NOTICE porte les attributions officielles", () => {
+    expect(licenseRaw).toContain("Apache License");
+    expect(licenseRaw).toContain("Version 2.0, January 2004");
+    expect(noticeRaw).toContain("Apache-2.0");
+    expect(noticeRaw).toContain("LégisQuébec");
+    expect(noticeRaw).toContain("CanLII");
+    expect(noticeRaw).toContain("CC BY-NC-SA 4.0");
   });
 
   it("README.md et SECURITY.md ne référencent aucun ancien nom de dépôt retiré", () => {
@@ -106,6 +107,7 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
       "README.md": readmeMd,
       "SECURITY.md": securityMd,
       LICENSE: licenseRaw,
+      NOTICE: noticeRaw,
       "package.json": pkgRaw,
       "wrangler.jsonc": wranglerRaw,
       "osv-scanner.toml": osvTomlRaw,

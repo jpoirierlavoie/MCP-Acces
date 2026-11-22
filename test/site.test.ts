@@ -247,7 +247,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(gouverneHtml).toContain("1032");
 
     const cguHtml = await (await demander("/cgu")).text();
-    expect(cguHtml).toContain("Autorisation complémentaire de pratique professionnelle du droit");
+    expect(cguHtml).toContain("Apache-2.0");
+    expect(cguHtml).toContain("NOTICE");
     expect(cguHtml).toContain("avocat plaideur en exercice");
     expect(cguHtml).toContain("zéro SLA");
     expect(cguHtml).toContain("5 jours ouvrables");
