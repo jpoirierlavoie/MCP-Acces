@@ -73,7 +73,7 @@ const LLMS_TXT = [
   `- Eligibility: Active practicing lawyers on the Roll of the Barreau du Québec (\`lois\` and \`juris\`); \`outils\` is public.`,
   `- Zero query-content logging: Cloudflare invocation logs disabled; ${POLITIQUES_RETENTION_IDENTITE.length} D1 identity tables verified statically without query text.`,
   `- Daily UTC quotas (active state): local=${QUOTAS_ACTIF_PAR_DEFAUT.local}/day, outbound CanLII=${QUOTAS_ACTIF_PAR_DEFAUT.sortant}/day, hybrid vector=${QUOTAS_ACTIF_PAR_DEFAUT.semantique}/day.`,
-  `- License: CC-BY-NC-SA-4.0 + Companion Professional Legal Practice Grant (ToU v. ${VERSION_CGU}, ${DELAI_RETABLISSEMENT_JOURS_OUVRABLES}-business-day written reinstatement procedure).`,
+  `- Software License: Apache-2.0 (with NOTICE attributing official legal & open-data sources; hosted service ToU v. ${VERSION_CGU} at /cgu, ${DELAI_RETABLISSEMENT_JOURS_OUVRABLES}-business-day written reinstatement procedure).`,
   "",
   "## Public Governance Documents",
   "",

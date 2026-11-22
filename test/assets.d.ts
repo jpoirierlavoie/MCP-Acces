@@ -33,6 +33,11 @@ declare module "*LICENSE?raw" {
   export default content;
 }
 
+declare module "*NOTICE?raw" {
+  const content: string;
+  export default content;
+}
+
 interface ImportMeta {
   readonly glob: <T = unknown>(
     pattern: string | string[],
