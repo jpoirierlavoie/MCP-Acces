@@ -55,7 +55,7 @@ ${biP(
 </footer>`;
 }
 
-function construireCgu(): { titre: string; desc: string; corps: string } {
+function construireCgu(): { titre: string; titreEn: string; desc: string; corps: string } {
   const corps = `<header>
 ${barreSuite(true, false)}
 <div class="bar">
@@ -167,12 +167,18 @@ ${piedDocument()}`;
 
   return {
     titre: "Conditions générales d'utilisation — MCP Accès",
+    titreEn: "Terms of Use — MCP Access",
     desc: "Conditions d'utilisation, autorisation de pratique professionnelle du droit, absence de SLA et procédure de rétablissement.",
     corps,
   };
 }
 
-function construireConfidentialite(): { titre: string; desc: string; corps: string } {
+function construireConfidentialite(): {
+  titre: string;
+  titreEn: string;
+  desc: string;
+  corps: string;
+} {
   const corps = `<header>
 ${barreSuite(true, false)}
 <div class="bar">
@@ -201,20 +207,21 @@ ${biP(
   [
     "Seuls sont recueillis les renseignements strictement nécessaires à la vérification de " +
       "l'admissibilité professionnelle et à la sécurité d'accès : nom, numéro de membre et section " +
-      "régionale du Barreau du Québec, adresse courriel professionnelle, cabinet (facultatif), " +
-      "horodatages d'acceptation de l'attestation et des CGU, clé API CanLII chiffrée par enveloppe " +
-      "(ainsi que son repère masqué et son empreinte HMAC sous clé maître), empreintes SHA-256 des " +
-      "jetons émis, compteurs journaliers par classe d'outil et événements techniques sans contenu " +
-      "tronqués à la minute UTC.",
+      "régionale du Barreau du Québec, adresse courriel professionnelle, cabinet (facultatif) et " +
+      "horodatages d'acceptation de l'attestation et des CGU. Sont également conservés la clé API " +
+      "CanLII chiffrée par enveloppe (avec son repère masqué et son empreinte HMAC sous clé maître), " +
+      "les empreintes SHA-256 des jetons émis, les compteurs journaliers par classe d'outil et les " +
+      "événements techniques sans contenu tronqués à la minute UTC.",
     "Absence totale de collecte du contenu des recherches : ni le texte des requêtes juridiques, ni " +
       "les identifiants d'articles ou d'arrêts consultés, ni les arguments JSON-RPC ne sont enregistrés.",
   ],
   [
     "Only information strictly necessary for professional eligibility verification and access security " +
       "is collected: name, Barreau du Québec member number and regional section, professional email " +
-      "address, firm name (optional), attestation and ToU acceptance timestamps, envelope-encrypted " +
-      "CanLII API key (with its masked hint and master-keyed HMAC fingerprint), SHA-256 token hashes, " +
-      "daily tool-class counters, and content-free technical events truncated to the UTC minute.",
+      "address, firm name (optional), and attestation and ToU acceptance timestamps. Also stored are " +
+      "the envelope-encrypted CanLII API key (with its masked hint and master-keyed HMAC fingerprint), " +
+      "SHA-256 token hashes, daily tool-class counters, and content-free technical events truncated to " +
+      "the UTC minute.",
     "Strict absence of query-content collection: neither legal search queries, nor consulted statute " +
       "or case identifiers, nor JSON-RPC arguments are ever recorded.",
   ],
@@ -225,19 +232,17 @@ ${biP(
 <h2>${bi("3. Droits d'accès, de portabilité, de retrait et de suppression (/moi)", "3. Access, Portability, Withdrawal & Erasure Rights (/moi)")}</h2>
 ${biP(
   [
-    "Depuis la console libre-service /moi, chaque titulaire exerce directement et sans délai : " +
-      "(a) l'exportation intégrale de ses renseignements personnels en format structuré JSON ; " +
-      "(b) la révocation immédiate de tout jeton d'accès ; (c) le retrait immédiat ou la rotation de " +
-      "sa clé API CanLII du coffre chiffré ; (d) la désactivation de la recherche vectorielle hybride " +
-      "(Workers AI) ; et (e) la suppression définitive en cascade de son compte et de tous les " +
-      "enregistrements rattachés dans mcp-identite.",
+    "Depuis le portail libre-service /moi, chaque titulaire exerce directement et sans délai ses " +
+      "droits d'exportation intégrale en format structuré JSON et de révocation immédiate de tout jeton " +
+      "d'accès. Il peut également y retirer ou remplacer sa clé API CanLII du coffre chiffré, désactiver " +
+      "la recherche vectorielle hybride (Workers AI) ou supprimer définitivement en cascade son compte " +
+      "et tous les enregistrements rattachés dans mcp-identite.",
   ],
   [
-    "Directly within the /moi self-service console, each account holder may immediately exercise: " +
-      "(a) full export of their personal records in structured JSON format; (b) immediate revocation " +
-      "of any access token; (c) immediate removal or rotation of their CanLII API key in the encrypted " +
-      "vault; (d) opt-out from Workers AI hybrid vector search; and (e) permanent cascading erasure " +
-      "of their account and all linked records in mcp-identite.",
+    "Directly within the /moi self-service portal, each account holder may immediately export their " +
+      "personal records in structured JSON format and revoke any access token. They may also remove or " +
+      "rotate their CanLII API key in the encrypted vault, opt out from Workers AI hybrid vector search, " +
+      "or permanently erase their account and all linked records in mcp-identite.",
   ],
 )}
 </section>
@@ -245,12 +250,18 @@ ${piedDocument()}`;
 
   return {
     titre: "Politique de confidentialité (Loi 25) — MCP Accès",
+    titreEn: "Privacy Policy (Law 25) — MCP Access",
     desc: "Politique de confidentialité Loi 25, absence de journalisation du contenu des recherches et droits libre-service dans /moi.",
     corps,
   };
 }
 
-function construireAttestation(): { titre: string; desc: string; corps: string } {
+function construireAttestation(): {
+  titre: string;
+  titreEn: string;
+  desc: string;
+  corps: string;
+} {
   const corps = `<header>
 ${barreSuite(true, false)}
 <div class="bar">
@@ -297,12 +308,18 @@ ${piedDocument()}`;
 
   return {
     titre: "Attestation solennelle — MCP Accès",
+    titreEn: "Applicant Solemn Attestation — MCP Access",
     desc: "Attestation solennelle d'inscription active en règle au Barreau du Québec et de détention légitime d'une clé API CanLII.",
     corps,
   };
 }
 
-function construireConformite(): { titre: string; desc: string; corps: string } {
+function construireConformite(): {
+  titre: string;
+  titreEn: string;
+  desc: string;
+  corps: string;
+} {
   const lignesRetention = POLITIQUES_RETENTION_IDENTITE.map(
     (p) => `<tr>
 <td><code>${esc(p.table)}</code></td>
@@ -409,12 +426,13 @@ ${piedDocument()}`;
 
   return {
     titre: "Fiche de conformité dérivée du code — MCP Accès",
+    titreEn: "Code-Derived Compliance Sheet — MCP Access",
     desc: "Inventaire dérivé du code des 11 tables de mcp-identite, durées de rétention Loi 25, sous-traitants et garanties cryptographiques.",
     corps,
   };
 }
 
-function construireGouverne(): { titre: string; desc: string; corps: string } {
+function construireGouverne(): { titre: string; titreEn: string; desc: string; corps: string } {
   const lignesQuotas = (
     [
       [
@@ -537,6 +555,7 @@ ${piedDocument()}`;
 
   return {
     titre: "Registre public de gouverne dérivé du code — MCP Accès",
+    titreEn: "Code-Derived Governance Register — MCP Access",
     desc: "Quotas journaliers, plafonds de débit d'arête Deep Research, états de compte et procédure de rétablissement.",
     corps,
   };
@@ -547,7 +566,7 @@ export function estCheminGouvernance(pathname: string): pathname is CheminDocume
 }
 
 const DOCUMENTS_MEMO: Readonly<
-  Record<CheminDocumentGouvernance, { titre: string; desc: string; corps: string }>
+  Record<CheminDocumentGouvernance, { titre: string; titreEn: string; desc: string; corps: string }>
 > = {
   "/cgu": construireCgu(),
   "/confidentialite": construireConfidentialite(),
@@ -565,6 +584,7 @@ export function repondreDocumentGouvernance(
 
   return repondrePageHtml({
     titrePage: doc.titre,
+    titrePageEn: doc.titreEn,
     descriptionMeta: doc.desc,
     corpsHtml: doc.corps,
     bilingue: true,
@@ -576,7 +596,7 @@ export function repondreDocumentGouvernance(
       "@context": "https://schema.org",
       "@type": "WebPage",
       url: urlCanonique,
-      name: doc.titre,
+      name: [doc.titre, doc.titreEn],
       description: doc.desc,
       inLanguage: ["fr-CA", "en-CA"],
       isPartOf: { "@id": `${ORIGINE_PORTAIL_PAR_DEFAUT}/#site` },

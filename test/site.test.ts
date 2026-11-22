@@ -123,6 +123,7 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     const sitemap = await (await demander("/sitemap.xml")).text();
     expect(sitemap).toContain("<loc>https://acces.poirierlavoie.ca/</loc>");
     expect(sitemap).toContain("<loc>https://acces.poirierlavoie.ca/cgu</loc>");
+    expect(sitemap).not.toContain("/demande");
 
     const llms = await (await demander("/llms.txt")).text();
     expect(llms).toContain("https://legislation.poirierlavoie.ca/");
@@ -170,6 +171,7 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
       expect(html, `${chemin} canonical`).toContain(
         `<link rel="canonical" href="https://acces.poirierlavoie.ca${chemin}">`,
       );
+      expect(html, `${chemin} titre EN`).toMatch(/<title data-fr="[^"]+" data-en="[^"]+">/);
 
       // Schéma JSON-LD valide
       const ldMatch =
@@ -209,6 +211,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
       await demander("/demande", { env: creerEnvTest({ MODE_ADMISSION: "ouvert" }) })
     ).text();
     expect(htmlDemande).toContain('<nav class="suite"');
+    expect(htmlDemande).toContain('<meta name="robots" content="noindex">');
+    expect(htmlDemande).toMatch(/<title data-fr="[^"]+" data-en="[^"]+">/);
     expect(htmlDemande).toContain('autocomplete="name"');
     expect(htmlDemande).toContain('autocomplete="email"');
     expect(htmlDemande).toContain('autocomplete="organization"');

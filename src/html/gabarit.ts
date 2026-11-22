@@ -131,7 +131,7 @@ html.t-dark #theme [data-t=dark]{display:inline}
   background:var(--bg);color:var(--f);border:1px solid var(--b);border-radius:5px}
 .champ textarea{max-width:44rem;min-height:4.5rem}
 .case{display:flex;gap:.55rem;align-items:flex-start;margin:.65rem 0}
-.case input{margin-top:.3rem}
+.case input{margin-top:.2rem;width:1.15rem;height:1.15rem;flex-shrink:0}
 .tw{overflow-x:auto;border:1px solid var(--b);border-radius:6px;background:var(--card);margin:.75rem 0}
 table{border-collapse:collapse;width:100%;font-size:.88rem}
 th,td{padding:.5rem .7rem;text-align:left;border-bottom:1px solid var(--b);vertical-align:top}
@@ -181,6 +181,8 @@ try{
   var t=localStorage.getItem('accesTheme');
   if(t==='light'||t==='dark') c.push('t-'+t);
   r.className=c.join(' ');
+  var ti=document.querySelector&&document.querySelector('title[data-en]');
+  if(ti&&p==='en') document.title=ti.getAttribute('data-en');
 }catch(e){}
 `);
 
@@ -202,6 +204,8 @@ const JS = `
     var nv=h.classList.contains('l-en')?'fr':'en';
     h.classList.toggle('l-fr',nv==='fr'); h.classList.toggle('l-en',nv==='en');
     h.lang=nv;
+    var ti=d.querySelector('title[data-en]');
+    if(ti) d.title=ti.getAttribute(nv==='en'?'data-en':'data-fr')||d.title;
     try{localStorage.setItem('accesLang',nv);}catch(e){}
   });
 
@@ -318,10 +322,12 @@ function rendrePastilleHaut(bilingue: boolean): string {
 
 export interface OptionsPageHtml {
   readonly titrePage: string;
+  readonly titrePageEn?: string;
   readonly descriptionMeta: string;
   readonly corpsHtml: string;
   readonly sections?: readonly SectionSommaire[];
   readonly bilingue?: boolean;
+  readonly noindex?: boolean;
   readonly statut?: number;
   readonly method?: string;
   readonly formAction?: string;
@@ -388,14 +394,18 @@ export function repondrePageHtml(options: OptionsPageHtml): Response {
     ? `\n<script type="application/ld+json" nonce="${nonce}">${JSON.stringify(options.jsonLd).replace(/</g, "\\u003c")}</script>`
     : "";
 
+  const attrTitre = options.titrePageEn
+    ? ` data-fr="${esc(options.titrePage)}" data-en="${esc(options.titrePageEn)}"`
+    : "";
+  const metaRobots = options.noindex ? '\n<meta name="robots" content="noindex">' : "";
   const avecTdm = options.sections !== undefined && options.sections.length > 0;
   const html = `<!doctype html>
 <html lang="fr" class="l-fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(options.titrePage)}</title>
-<meta name="description" content="${esc(options.descriptionMeta)}">${metaDecouverte}
+<title${attrTitre}>${esc(options.titrePage)}</title>
+<meta name="description" content="${esc(options.descriptionMeta)}">${metaRobots}${metaDecouverte}
 <style>${CSS}</style>${blocJsonLd}
 <script nonce="${nonce}">${bilingue ? BOOT : BOOT_FR_SEUL}</script>
 </head>
