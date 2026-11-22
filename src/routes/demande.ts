@@ -198,10 +198,12 @@ ${contenuPrincipal}`;
 
   return repondrePageHtml({
     titrePage: "Demande d'accès — MCP Accès (Barreau du Québec)",
+    titrePageEn: "Access Application — MCP Access (Barreau du Québec)",
     descriptionMeta:
       "Formulaire d'admission réservé aux membres actifs en règle du Barreau du Québec avec épreuve BYOK CanLII.",
     corpsHtml: corps,
     bilingue: true,
+    noindex: true,
     statut: params.statut ?? 200,
     method: params.method,
     formAction: "'self'",

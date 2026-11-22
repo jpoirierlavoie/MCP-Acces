@@ -339,7 +339,8 @@ const CORPS_ACCUEIL_MEMO = construireCorpsAccueil();
 
 export function repondrePageAccueil(method: string): Response {
   return repondrePageHtml({
-    titrePage: "MCP Accès — Portail d'admission et serveur OAuth 2.1 (Barreau du Québec)",
+    titrePage: "MCP Accès — Admission et OAuth 2.1 (Barreau du Québec)",
+    titrePageEn: "MCP Access — Admission & OAuth 2.1 (Barreau du Québec)",
     descriptionMeta:
       "Portail d'admission Barreau du Québec, coffre individuel CanLII BYOK et serveur d'autorisation OAuth 2.1 pour MCP Législation, MCP Jurisprudence et MCP Outils.",
     corpsHtml: CORPS_ACCUEIL_MEMO,
