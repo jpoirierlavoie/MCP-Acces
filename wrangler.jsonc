@@ -65,6 +65,6 @@
     "EXPEDITEUR_COURRIEL": "noreply@acces.poirierlavoie.ca",
     "CANLII_BASE_URL": "https://api.canlii.org/v1",
     "COMMIT": "inconnu",
-    "ALLOWED_ORIGINS": ""
+    "ALLOWED_ORIGINS": "https://chatgpt.com,https://chat.openai.com,https://platform.openai.com"
   }
 }
