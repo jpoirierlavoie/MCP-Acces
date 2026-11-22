@@ -32,7 +32,7 @@ import {
   envoyerCourrielConfirmationDemande,
   envoyerCourrielRappelCompteExistant,
 } from "../courriel";
-import { boutonsEntete, esc, repondrePageHtml } from "../html/gabarit";
+import { barreSuite, bi, boutonsEntete, esc, repondrePageHtml } from "../html/gabarit";
 import {
   construireAnneauMaitres,
   creerIdentifiant,
@@ -77,6 +77,29 @@ interface LigneDemandeAccesD1 {
   readonly consomme_le: string | null;
 }
 
+const ERREURS_DEMANDE_EN: Readonly<Record<string, string>> = {
+  "Les nouvelles admissions sont actuellement fermées.":
+    "New access applications are currently closed.",
+  "Le portail d'admission n'est pas entièrement configuré (fermé par défaut).":
+    "The admission portal is not fully configured (closed by default).",
+  "Veuillez indiquer votre nom complet (2 à 120 caractères).":
+    "Please enter your full name (2 to 120 characters).",
+  "Format de numéro de membre du Barreau du Québec invalide.":
+    "Invalid Barreau du Québec member number format.",
+  "Veuillez sélectionner une section régionale officielle du Barreau du Québec.":
+    "Please select an official Barreau du Québec regional section.",
+  "Adresse courriel professionnelle invalide.": "Invalid professional email address.",
+  "Le nom du cabinet est invalide ou dépasse la longueur maximale autorisée (160 caractères).":
+    "Firm name is invalid or exceeds the maximum length (160 characters).",
+  "Veuillez fournir une clé REST API CanLII valide.": "Please provide a valid CanLII REST API key.",
+  "L'acceptation de l'attestation solennelle et des conditions d'utilisation est requise.":
+    "Acceptance of the solemn attestation and terms of use is required.",
+  "Code d'invitation absent ou invalide.": "Missing or invalid invitation code.",
+  "Code d'invitation invalide, expiré ou réservé à une autre adresse.":
+    "Invitation code is invalid, expired, or reserved for another email address.",
+  "Configuration du coffre indisponible.": "Vault configuration unavailable.",
+};
+
 function rendrePageFormulaireDemande(params: {
   mode: "ferme" | "invitation" | "ouvert";
   method?: string;
@@ -99,75 +122,77 @@ function rendrePageFormulaireDemande(params: {
 
   let contenuPrincipal: string;
   if (params.messageSuccesNeutre) {
-    contenuPrincipal = `<div class="ok">
-<h2>Vérifiez votre boîte courriel professionnelle</h2>
-<p>Si votre demande est recevable, un lien de confirmation à usage unique (valable ${DUREE_DEMANDE_ACCES_MINUTES}&nbsp;minutes) vient d'être expédié depuis <code>noreply@acces.poirierlavoie.ca</code>.</p>
-<p class="m">Votre numéro de membre du Barreau n'est engagé qu'après confirmation du courriel. Une fois votre courriel confirmé, votre inscription active sera vérifiée manuellement au <em>Bottin des avocats</em> avant activation.</p>
+    contenuPrincipal = `<div class="ok" role="status">
+<h2>${bi("Vérifiez votre boîte courriel professionnelle", "Check your professional email inbox")}</h2>
+<p><span data-l="fr">Si votre demande est recevable, un lien de confirmation à usage unique (valable ${DUREE_DEMANDE_ACCES_MINUTES}&nbsp;minutes) vient d'être expédié depuis <code>noreply@acces.poirierlavoie.ca</code>.</span><span data-l="en" lang="en">If your application is eligible, a single-use confirmation link (valid for ${DUREE_DEMANDE_ACCES_MINUTES}&nbsp;minutes) has just been sent from <code>noreply@acces.poirierlavoie.ca</code>.</span></p>
+<p class="m"><span data-l="fr">Votre numéro de membre du Barreau n'est engagé qu'après confirmation du courriel. Une fois votre courriel confirmé, votre inscription active sera vérifiée manuellement au <em>Bottin des avocats</em> avant activation.</span><span data-l="en" lang="en">Your Barreau member number is only reserved once your email is confirmed. After confirmation, active enrolment will be manually verified against the <em>Bottin des avocats</em> before activation.</span></p>
 </div>`;
   } else if (params.mode === "ferme") {
     contenuPrincipal = `<div class="avert">
-<h2>Admissions temporairement fermées</h2>
-<p>Le dépôt de nouvelles demandes d'accès est présentement fermé. Les titulaires déjà inscrits conservent pleinement accès à leur console <a href="/moi"><code>/moi</code></a>.</p>
+<h2>${bi("Admissions temporairement fermées", "Applications temporarily closed")}</h2>
+<p><span data-l="fr">Le dépôt de nouvelles demandes d'accès est présentement fermé. Les titulaires déjà inscrits conservent pleinement accès à leur espace libre-service <a href="/moi"><code>/moi</code></a>.</span><span data-l="en" lang="en">New access applications are currently closed. Already admitted members retain full access to their <a href="/moi"><code>/moi</code></a> self-service portal.</span></p>
 </div>`;
   } else {
     const champInvitation =
       params.mode === "invitation"
         ? `<div class="champ">
-<label for="code_invitation">Code d'invitation de cohorte (requis)</label>
-<input id="code_invitation" name="code_invitation" type="text" required autocomplete="off" value="${esc(params.valeurs?.codeInvitation ?? "")}">
-<p class="m">Le déploiement initial est ouvert par cohorte sur invitation.</p>
+<label for="code_invitation">${bi("Code d'invitation de cohorte (requis)", "Cohort invitation code (required)")}</label>
+<p id="aide-invitation" class="m">${bi("Le déploiement initial est ouvert par cohorte sur invitation.", "Initial rollout is open by cohort invitation.")}</p>
+<input id="code_invitation" name="code_invitation" type="text" required autocomplete="off" aria-describedby="aide-invitation" value="${esc(params.valeurs?.codeInvitation ?? "")}">
 </div>`
         : "";
 
-    contenuPrincipal = `${params.erreur ? `<div class="err"><p><strong>Demande incomplète :</strong> ${esc(params.erreur)}</p></div>` : ""}
+    const msgErrEn = params.erreur ? (ERREURS_DEMANDE_EN[params.erreur] ?? params.erreur) : "";
+    contenuPrincipal = `${params.erreur ? `<div class="err" role="alert"><p><strong>${bi("Demande incomplète :", "Incomplete application:")}</strong> ${bi(params.erreur, msgErrEn)}</p></div>` : ""}
 <form method="POST" action="/demande" class="carte">
 ${champInvitation}
 <div class="champ">
-<label for="nom">Nom complet tel qu'inscrit au Tableau de l'Ordre</label>
-<input id="nom" name="nom" type="text" required maxlength="120" value="${esc(params.valeurs?.nom ?? "")}">
+<label for="nom">${bi("Nom complet tel qu'inscrit au Tableau de l'Ordre", "Full name as enrolled on the Roll of the Order")}</label>
+<input id="nom" name="nom" type="text" required autocomplete="name" maxlength="120" value="${esc(params.valeurs?.nom ?? "")}">
 </div>
 <div class="champ">
-<label for="numero_membre">Numéro de membre du Barreau du Québec (ex. 123456-7)</label>
-<input id="numero_membre" name="numero_membre" type="text" required maxlength="16" value="${esc(params.valeurs?.numeroMembre ?? "")}">
+<label for="numero_membre">${bi("Numéro de membre du Barreau du Québec (ex. 123456-7)", "Barreau du Québec member number (e.g. 123456-7)")}</label>
+<input id="numero_membre" name="numero_membre" type="text" required autocomplete="off" maxlength="16" value="${esc(params.valeurs?.numeroMembre ?? "")}">
 </div>
 <div class="champ">
-<label for="section">Section régionale du Barreau</label>
+<label for="section">${bi("Section régionale du Barreau", "Barreau regional section")}</label>
 <select id="section" name="section" required>
-<option value="">— Sélectionner une section —</option>
+<option value="">— Section / Regional section —</option>
 ${optionsSections}
 </select>
 </div>
 <div class="champ">
-<label for="courriel">Adresse courriel professionnelle</label>
-<input id="courriel" name="courriel" type="email" required maxlength="254" value="${esc(params.valeurs?.courriel ?? "")}">
+<label for="courriel">${bi("Adresse courriel professionnelle", "Professional email address")}</label>
+<input id="courriel" name="courriel" type="email" inputmode="email" required autocomplete="email" maxlength="254" value="${esc(params.valeurs?.courriel ?? "")}">
 </div>
 <div class="champ">
-<label for="cabinet">Cabinet ou organisme (facultatif)</label>
-<input id="cabinet" name="cabinet" type="text" maxlength="160" value="${esc(params.valeurs?.cabinet ?? "")}">
+<label for="cabinet">${bi("Cabinet ou organisme (facultatif)", "Firm or organization (optional)")}</label>
+<input id="cabinet" name="cabinet" type="text" autocomplete="organization" maxlength="160" value="${esc(params.valeurs?.cabinet ?? "")}">
 </div>
 <div class="champ">
-<label for="clef_canlii">Clé REST API CanLII personnelle ou de cabinet (obligatoire — BYOK)</label>
-<input id="clef_canlii" name="clef_canlii" type="password" required autocomplete="off" maxlength="256">
-<p class="m">Éprouvée en direct contre <code>caseBrowse/fr/</code> puis chiffrée par enveloppe (<code>HKDF-SHA256</code> + <code>AES-256-GCM</code>). Jamais stockée ni journalisée en clair.</p>
+<label for="clef_canlii">${bi("Clé REST API CanLII personnelle ou de cabinet (obligatoire — BYOK)", "Personal or firm CanLII REST API key (mandatory — BYOK)")}</label>
+<p id="aide-canlii" class="m"><span data-l="fr">Éprouvée en direct contre <code>caseBrowse/fr/</code> puis chiffrée par enveloppe (<code>HKDF-SHA256</code> + <code>AES-256-GCM</code>). Jamais stockée ni journalisée en clair.</span><span data-l="en" lang="en">Probed live against <code>caseBrowse/fr/</code> then envelope-encrypted (<code>HKDF-SHA256</code> + <code>AES-256-GCM</code>). Never stored or logged in plaintext.</span></p>
+<input id="clef_canlii" name="clef_canlii" type="password" required autocomplete="off" aria-describedby="aide-canlii" maxlength="256">
 </div>
 <div class="case">
 <input id="attestation_acceptee" name="attestation_acceptee" type="checkbox" value="oui" required>
-<label for="attestation_acceptee">Je souscris à l'<a href="/attestation">attestation solennelle</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}) : je suis inscrit(e) actif(ve) en règle au Barreau du Québec et je détiens légitimement cette clé API CanLII.</label>
+<label for="attestation_acceptee"><span data-l="fr">Je souscris à l'<a href="/attestation">attestation solennelle</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}) : je suis inscrit(e) actif(ve) en règle au Barreau du Québec et je détiens légitimement cette clé API CanLII.</span><span data-l="en" lang="en">I subscribe to the <a href="/attestation">solemn attestation</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}): I am an active member in good standing of the Barreau du Québec and legitimately hold this CanLII API key.</span></label>
 </div>
 <div class="case">
 <input id="cgu_acceptees" name="cgu_acceptees" type="checkbox" value="oui" required>
-<label for="cgu_acceptees">J'accepte les <a href="/cgu">conditions générales d'utilisation</a> (v.&nbsp;${esc(VERSION_CGU)}) et j'ai pris connaissance de la <a href="/confidentialite">politique de confidentialité</a>.</label>
+<label for="cgu_acceptees"><span data-l="fr">J'accepte les <a href="/cgu">conditions générales d'utilisation</a> (v.&nbsp;${esc(VERSION_CGU)}) et j'ai pris connaissance de la <a href="/confidentialite">politique de confidentialité</a>.</span><span data-l="en" lang="en">I accept the <a href="/cgu">terms of use</a> (v.&nbsp;${esc(VERSION_CGU)}) and have read the <a href="/confidentialite">privacy policy</a>.</span></label>
 </div>
-<p><button type="submit" class="btn">Vérifier ma clé CanLII et recevoir mon lien de confirmation</button></p>
+<p><button type="submit" class="btn">${bi("Vérifier ma clé CanLII et recevoir mon lien de confirmation", "Verify my CanLII key & send confirmation link")}</button></p>
 </form>`;
   }
 
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
-<h1>Demande d'accès (/demande)</h1>
-${boutonsEntete(false)}
+<h1>${bi("Demande d'accès (/demande)", "Access Application (/demande)")}</h1>
+${boutonsEntete(true)}
 </div>
-<p class="m"><a href="/">← Retour à l'accueil</a> · <a href="/moi">Console /moi</a> · <a href="/conformite">/conformite</a></p>
+<p class="m"><a href="/">${bi("← Retour à l'accueil", "← Back to portal")}</a> · <a href="/moi">${bi("Console /moi", "Console /moi")}</a> · <a href="/conformite">/conformite</a></p>
 </header>
 ${contenuPrincipal}`;
 
@@ -176,6 +201,7 @@ ${contenuPrincipal}`;
     descriptionMeta:
       "Formulaire d'admission réservé aux membres actifs en règle du Barreau du Québec avec épreuve BYOK CanLII.",
     corpsHtml: corps,
+    bilingue: true,
     statut: params.statut ?? 200,
     method: params.method,
     formAction: "'self'",

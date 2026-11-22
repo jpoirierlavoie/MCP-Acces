@@ -1,7 +1,8 @@
 /**
  * Point d'entrée du Worker `MCP-Acces` (`https://acces.poirierlavoie.ca`, `SPEC §4`, `§9`, `§10`) :
  * - pages publiques survivant au coupe-circuit `MCP_ENABLED` (`G22`) : `GET /`, `/cgu`,
- *   `/confidentialite`, `/attestation`, `/conformite` (`S20`/`G18`), `/gouverne` (`S20`) ;
+ *   `/confidentialite`, `/attestation`, `/conformite` (`S20`/`G18`), `/gouverne` (`S20`),
+ *   ainsi que `/robots.txt`, `/sitemap.xml` et `/llms.txt` ;
  * - point de santé `/health` (`reponseSante`) ;
  * - admission préalable `/demande` et `/demande/confirmer` ;
  * - console libre-service `/moi` et `/moi/connexion` ;
@@ -22,6 +23,7 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import { ORIGINE_PORTAIL_PAR_DEFAUT } from "./constantes";
 import { repondrePageAccueil } from "./html/accueil";
+import { estCheminDecouvertePublique, repondreDecouvertePublique } from "./html/decouverte";
 import { estCheminGouvernance, repondreDocumentGouvernance } from "./html/gouvernance";
 import { gererRouteConfirmationDemande, gererRouteDemande } from "./routes/demande";
 import { gererRouteExploitant } from "./routes/exploitant";
@@ -74,6 +76,13 @@ export function creerGestionnaireAcces(options: OptionsGestionnaireAcces = {}) {
           return repondreMethodeNonPermise(["GET", "HEAD"]);
         }
         return repondrePageAccueil(request.method);
+      }
+
+      if (estCheminDecouvertePublique(pathname)) {
+        if (request.method !== "GET" && request.method !== "HEAD") {
+          return repondreMethodeNonPermise(["GET", "HEAD"]);
+        }
+        return repondreDecouvertePublique(pathname, request.method);
       }
 
       if (estCheminGouvernance(pathname)) {

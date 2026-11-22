@@ -23,12 +23,13 @@ import {
   COURRIEL_CONTACT_RESPONSABLE,
   DELAI_RETABLISSEMENT_JOURS_OUVRABLES,
   MOTIFS_GOUVERNE,
+  ORIGINE_PORTAIL_PAR_DEFAUT,
   PLAFONDS_DEBIT_ARETE,
   VERSION_ATTESTATION,
   VERSION_CGU,
   VERSION_CONFIDENTIALITE,
 } from "../constantes";
-import { bi, biP, boutonsEntete, esc, repondrePageHtml } from "./gabarit";
+import { barreSuite, bi, biP, boutonsEntete, esc, repondrePageHtml } from "./gabarit";
 
 export const CHEMINS_DOCUMENTS_GOUVERNANCE = [
   "/cgu",
@@ -41,7 +42,7 @@ export const CHEMINS_DOCUMENTS_GOUVERNANCE = [
 export type CheminDocumentGouvernance = (typeof CHEMINS_DOCUMENTS_GOUVERNANCE)[number];
 
 function barreNavigationPublique(): string {
-  return `<p class="m"><a href="/">Accueil</a> · <a href="/demande">/demande</a> · <a href="/moi">/moi</a> · <a href="/cgu">/cgu</a> · <a href="/confidentialite">/confidentialite</a> · <a href="/attestation">/attestation</a> · <a href="/conformite">/conformite</a> · <a href="/gouverne">/gouverne</a></p>`;
+  return `<p class="m"><a href="/">${bi("Accueil", "Home")}</a> · <a href="/demande">/demande</a> · <a href="/moi">/moi</a> · <a href="/cgu">/cgu</a> · <a href="/confidentialite">/confidentialite</a> · <a href="/attestation">/attestation</a> · <a href="/conformite">/conformite</a> · <a href="/gouverne">/gouverne</a></p>`;
 }
 
 function piedDocument(): string {
@@ -56,6 +57,7 @@ ${biP(
 
 function construireCgu(): { titre: string; desc: string; corps: string } {
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
 <h1>${bi("Conditions générales d'utilisation (/cgu)", "Terms of Use (/cgu)")}</h1>
 ${boutonsEntete(true)}
@@ -172,6 +174,7 @@ ${piedDocument()}`;
 
 function construireConfidentialite(): { titre: string; desc: string; corps: string } {
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
 <h1>${bi("Politique de confidentialité — Loi 25 (/confidentialite)", "Privacy Policy — Law 25 (/confidentialite)")}</h1>
 ${boutonsEntete(true)}
@@ -249,6 +252,7 @@ ${piedDocument()}`;
 
 function construireAttestation(): { titre: string; desc: string; corps: string } {
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
 <h1>${bi("Attestation solennelle du demandeur (/attestation)", "Applicant Solemn Attestation (/attestation)")}</h1>
 ${boutonsEntete(true)}
@@ -309,6 +313,7 @@ function construireConformite(): { titre: string; desc: string; corps: string } 
   ).join("");
 
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
 <h1>${bi("Fiche technique de conformité dérivée du code (/conformite)", "Code-Derived Technical Compliance Sheet (/conformite)")}</h1>
 ${boutonsEntete(true)}
@@ -382,20 +387,20 @@ ${biP(
 </section>
 
 <section id="retention">
-<h2>${bi(`3. Inventaire exhaustif des ${POLITIQUES_RETENTION_IDENTITE.length} tables de mcp-identite (S20, G18)`, `3. Exhaustive Inventory of All ${POLITIQUES_RETENTION_IDENTITE.length} Tables in mcp-identite (S20, G18)`)}</h2>
+<h2 id="h-retention">${bi(`3. Inventaire exhaustif des ${POLITIQUES_RETENTION_IDENTITE.length} tables de mcp-identite (S20, G18)`, `3. Exhaustive Inventory of All ${POLITIQUES_RETENTION_IDENTITE.length} Tables in mcp-identite (S20, G18)`)}</h2>
 ${biP(
   [
     `Ce tableau est généré dynamiquement depuis POLITIQUES_RETENTION_IDENTITE (@poirierlavoie/mcp-socle) et vérifié contre le schéma SQL réel par verifierCouvertureRetentionSchema : rétention maximale de ${RETENTION_EVENEMENTS_JOURS} jours sur evenement_technique, ${RETENTION_COMPTEURS_JOURS} jours sur compteur_jour, ${DUREE_DEMANDE_ACCES_MINUTES} minutes sur demande_acces, ${DUREE_LIEN_PORTAIL_MINUTES} minutes sur les liens de portail, ${DUREE_SESSION_MOI_HEURES} heures sur session_moi et ${DUREE_CODE_OAUTH_SECONDES} secondes sur code_oauth.`,
   ],
   [
-    `This table is dynamically rendered from POLITIQUES_RETENTION_IDENTITE (@poirierlavoie/mcp-socle) and verified against the live SQL schema by verifierCouvertureRetentionSchema: maximum retention of ${RETENTION_EVENEMENTS_JOURS} days on evenement_technique, ${RETENTION_COMPTEURS_JOURS} days on compteur_jour, ${DUREE_DEMANDE_ACCES_MINUTES} minutes on demande_acces, ${DUREE_LIEN_PORTAIL_MINUTES} minutes on portal links, ${DUREE_SESSION_MOI_HEURES} hours on session_moi, and ${DUREE_CODE_OAUTH_SECONDES} seconds on code_oauth.`,
+    `This table is dynamically rendered from POLITIQUES_RETENTION_IDENTITE (@poirierlavoie/mcp-socle) and verified against the live SQL schema by verifierCouvertureRetentionSchema: maximum retention of ${RETENTION_EVENEMENTS_JOURS} days on evenement_technique, ${RETENTION_COMPTEURS_JOURS} days on compteur_jour, ${DUREE_DEMANDE_ACCES_MINUTES} minutes on portal links, ${DUREE_SESSION_MOI_HEURES} hours on session_moi, and ${DUREE_CODE_OAUTH_SECONDES} seconds on code_oauth.`,
   ],
 )}
-<div class="tw"><table><thead><tr>
-<th>${bi("Table D1", "D1 Table")}</th>
-<th>${bi("Régime", "Mode")}</th>
-<th>${bi("Durée maximale de conservation (FR)", "Retention policy (canonical FR)")}</th>
-<th>${bi("Routine de purge", "Purge routine")}</th>
+<div class="tw" tabindex="0" role="region" aria-labelledby="h-retention"><table><thead><tr>
+<th scope="col">${bi("Table D1", "D1 Table")}</th>
+<th scope="col">${bi("Régime", "Mode")}</th>
+<th scope="col">${bi("Durée maximale de conservation (FR)", "Retention policy (canonical FR)")}</th>
+<th scope="col">${bi("Routine de purge", "Purge routine")}</th>
 </tr></thead><tbody>
 ${lignesRetention}
 </tbody></table></div>
@@ -454,6 +459,7 @@ function construireGouverne(): { titre: string; desc: string; corps: string } {
   ).join("");
 
   const corps = `<header>
+${barreSuite(true, false)}
 <div class="bar">
 <h1>${bi("Registre public de gouverne dérivé du code (/gouverne)", "Code-Derived Public Governance Register (/gouverne)")}</h1>
 ${boutonsEntete(true)}
@@ -462,7 +468,7 @@ ${barreNavigationPublique()}
 </header>
 
 <section id="quotas">
-<h2>${bi("1. Quotas journaliers UTC par classe d'outil (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)", "1. Daily UTC Quotas by Tool Class (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)")}</h2>
+<h2 id="h-quotas">${bi("1. Quotas journaliers UTC par classe d'outil (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)", "1. Daily UTC Quotas by Tool Class (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)")}</h2>
 ${biP(
   [
     "Les valeurs ci-dessous proviennent directement des constantes exécutées par les Workers " +
@@ -475,18 +481,18 @@ ${biP(
       "(isError: true), automatically resetting at 00:00 UTC.",
   ],
 )}
-<div class="tw"><table><thead><tr>
-<th>${bi("Classe", "Class")}</th>
-<th class="n">${bi("État actif / surveille", "actif / surveille state")}</th>
-<th class="n">${bi("État limite", "limite state")}</th>
-<th>${bi("Périmètre exact", "Exact scope")}</th>
+<div class="tw" tabindex="0" role="region" aria-labelledby="h-quotas"><table><thead><tr>
+<th scope="col">${bi("Classe", "Class")}</th>
+<th scope="col" class="n">${bi("État actif / surveille", "actif / surveille state")}</th>
+<th scope="col" class="n">${bi("État limite", "limite state")}</th>
+<th scope="col">${bi("Périmètre exact", "Exact scope")}</th>
 </tr></thead><tbody>
 ${lignesQuotas}
 </tbody></table></div>
 </section>
 
 <section id="debit">
-<h2>${bi("2. Limiteurs de débit d'arête et isolation Deep Research (S15, G34)", "2. Edge Rate Limiters & Deep Research Shared-IP Isolation (S15, G34)")}</h2>
+<h2 id="h-debit">${bi("2. Limiteurs de débit d'arête et isolation Deep Research (S15, G34)", "2. Edge Rate Limiters & Deep Research Shared-IP Isolation (S15, G34)")}</h2>
 ${biP(
   [
     "Afin que les rafales parallèles de Claude Research et Gemini Deep Research depuis des adresses IP " +
@@ -500,13 +506,13 @@ ${biP(
       "authentication failures, backed by a pre-D1 pass for recently verified SHA-256 token digests.",
   ],
 )}
-<div class="tw"><table><thead><tr>
-<th>Worker</th>
-<th>${bi("Liaison", "Binding")}</th>
-<th class="n">namespace_id</th>
-<th>${bi("Clé", "Key")}</th>
-<th class="n">${bi("Plafond", "Limit")}</th>
-<th>${bi("Effet", "Effect")}</th>
+<div class="tw" tabindex="0" role="region" aria-labelledby="h-debit"><table><thead><tr>
+<th scope="col">Worker</th>
+<th scope="col">${bi("Liaison", "Binding")}</th>
+<th scope="col" class="n">namespace_id</th>
+<th scope="col">${bi("Clé", "Key")}</th>
+<th scope="col" class="n">${bi("Plafond", "Limit")}</th>
+<th scope="col">${bi("Effet", "Effect")}</th>
 </tr></thead><tbody>
 ${lignesDebit}
 </tbody></table></div>
@@ -540,20 +546,22 @@ export function estCheminGouvernance(pathname: string): pathname is CheminDocume
   return (CHEMINS_DOCUMENTS_GOUVERNANCE as readonly string[]).includes(pathname);
 }
 
+const DOCUMENTS_MEMO: Readonly<
+  Record<CheminDocumentGouvernance, { titre: string; desc: string; corps: string }>
+> = {
+  "/cgu": construireCgu(),
+  "/confidentialite": construireConfidentialite(),
+  "/attestation": construireAttestation(),
+  "/conformite": construireConformite(),
+  "/gouverne": construireGouverne(),
+};
+
 export function repondreDocumentGouvernance(
   chemin: CheminDocumentGouvernance,
   method: string,
 ): Response {
-  const doc =
-    chemin === "/cgu"
-      ? construireCgu()
-      : chemin === "/confidentialite"
-        ? construireConfidentialite()
-        : chemin === "/attestation"
-          ? construireAttestation()
-          : chemin === "/conformite"
-            ? construireConformite()
-            : construireGouverne();
+  const doc = DOCUMENTS_MEMO[chemin];
+  const urlCanonique = `${ORIGINE_PORTAIL_PAR_DEFAUT}${chemin}`;
 
   return repondrePageHtml({
     titrePage: doc.titre,
@@ -563,5 +571,15 @@ export function repondreDocumentGouvernance(
     method,
     formAction: "'none'",
     cachePublicMaxAge: 600,
+    urlCanonique,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      url: urlCanonique,
+      name: doc.titre,
+      description: doc.desc,
+      inLanguage: ["fr-CA", "en-CA"],
+      isPartOf: { "@id": `${ORIGINE_PORTAIL_PAR_DEFAUT}/#site` },
+    },
   });
 }
