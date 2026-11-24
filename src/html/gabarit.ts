@@ -44,9 +44,9 @@ const CLAIR =
   "--ok-bg:#f0fdf4;--ok-b:#86efac;--err-bg:#fef2f2;--err-b:#fca5a5";
 
 const SOMBRE =
-  "color-scheme:dark;--f:#f1f5f9;--m:#94a3b8;--b:#334155;--bi:#64748b;--a:#60a5fa;--bg:#0b1120;--card:#111827;" +
-  "--th:#1e293b;--code:#1e293b;--hover:#1e293b;--avert-bg:#172554;--avert-b:#1d4ed8;" +
-  "--ok-bg:#052e16;--ok-b:#16a34a;--err-bg:#450a0a;--err-b:#dc2626";
+  "color-scheme:dark;--f:#e4e4e7;--m:#a1a1aa;--b:#27272b;--bi:#71717a;--a:#6ea8fe;--bg:#0c0c0e;--card:#141417;" +
+  "--th:#1b1b1f;--code:#1c1c21;--hover:#1d1d22;--avert-bg:#15171c;--avert-b:#303642;" +
+  "--ok-bg:#0e1c14;--ok-b:#22543d;--err-bg:#221214;--err-b:#6e2a30";
 
 const LARGE = "78rem";
 const SOLEIL = "☀︎";
@@ -405,6 +405,7 @@ export function repondrePageHtml(options: OptionsPageHtml): Response {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title${attrTitre}>${esc(options.titrePage)}</title>
 <meta name="description" content="${esc(options.descriptionMeta)}">${metaRobots}${metaDecouverte}
 <style>${CSS}</style>${blocJsonLd}
