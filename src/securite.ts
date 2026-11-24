@@ -22,6 +22,7 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import {
   DUREE_SESSION_EXPLOITANT_SECONDES,
+  NUMERO_MEMBRE_EVALUATION,
   SECTIONS_BARREAU,
   type SectionBarreau,
   USAGE_COFFRE_CANLII,
@@ -64,12 +65,28 @@ function lireConsoleInterne(env: Env): string | null {
   return propre.length >= 32 ? propre : null;
 }
 
+function lireEvaluationInterne(env: Env): string | null {
+  const brut = env.EVALUATION_TOKEN;
+  if (typeof brut !== "string") return null;
+  const propre = brut.trim();
+  if (propre.length < 32 || propre.length > 512) return null;
+  for (let i = 0; i < propre.length; i++) {
+    const code = propre.charCodeAt(i);
+    if (code < 0x21 || code > 0x7e) return null;
+  }
+  return propre;
+}
+
 export function estCoffreConfigure(env: Env): boolean {
   return lireMaitreInterne(env) !== null;
 }
 
 export function estConsoleConfiguree(env: Env): boolean {
   return lireConsoleInterne(env) !== null;
+}
+
+export function estEvaluationConfiguree(env: Env): boolean {
+  return lireEvaluationInterne(env) !== null;
 }
 
 export function construireAnneauMaitres(env: Env): AnneauMaitresCoffre {
@@ -380,6 +397,15 @@ export async function verifierJetonConsoleSoumis(env: Env, soumis: string): Prom
   return await memeSecret(soumis, consoleToken);
 }
 
+export async function verifierMotDePasseEvaluation(env: Env, soumis: string): Promise<boolean> {
+  const attendu = lireEvaluationInterne(env);
+  if (!attendu || soumis.length === 0 || soumis.length > 512) {
+    await memeSecret("0".repeat(64), "0".repeat(64));
+    return false;
+  }
+  return await memeSecret(soumis, attendu);
+}
+
 export async function creerEnTeteCookieSessionExploitant(
   env: Env,
   estHttps: boolean,
@@ -504,7 +530,9 @@ export function normaliserNumeroMembre(brut: string | null | undefined): string 
   const rogne = brut.trim();
   if (!/^\d{4,8}(?:-\d)?$/.test(rogne)) return null;
   const chiffres = rogne.replace(/-/g, "");
-  if (chiffres.length < 5 || chiffres.length > 9) return null;
+  if (chiffres.length < 5 || chiffres.length > 9 || chiffres === NUMERO_MEMBRE_EVALUATION) {
+    return null;
+  }
   return chiffres;
 }
 

@@ -17,6 +17,7 @@ export interface CourrielCapture {
 
 export const SECRET_MAITRE_TEST = "maitre_test_v1_au_moins_trente_deux_caracteres_ok_012345";
 export const SECRET_CONSOLE_TEST = "console_token_test_au_moins_trente_deux_caracteres_012345";
+export const SECRET_EVALUATION_TEST = "evaluation_secret_test_au_moins_trente_deux_caracteres_0123";
 export const CLEF_CANLII_VALIDE_TEST = "canlii_clef_individuelle_valide_2026_abcd";
 
 export function decouperInstructionsSql(sql: string): string[] {

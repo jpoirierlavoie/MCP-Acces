@@ -73,6 +73,7 @@ src/
 8. **OAuth 2.1 sans redirection ouverte ni SSRF (`G35`, `G36`) :** Validation de `client_id` et `redirect_uri` avant toute redirection, résolution réseau CIMD réservée aux titulaires authentifiés (`redirect: "manual"` avec rejet explicite des réponses `3xx`), jeton de consentement HMAC liant tous les paramètres OAuth, PKCE `S256` obligatoire, validation RFC 8707 `resource`, consommation atomique immédiate et révocation sur rejeu de `code_oauth`.
 9. **Secrets locaux :** Ne jamais lire, afficher ni committer `cf.token`, `*.token`, `.dev.vars`, `mcp.url` ou `.env*`.
 10. **Gouvernance Git (`main-pr-and-ci`) :** Le contournement administrateur du ruleset `main-pr-and-ci` est restreint à `pull_request` — **ne jamais pousser directement sur `main`** ; travailler sur une branche dédiée, ouvrir une Pull Request, attendre le passage des contrôles requis (`CI`, `CodeQL`, `OSV-Scanner`, `Trivy`), puis fusionner par *squash* (`gh pr merge --squash --delete-branch`).
+11. **Compte d'évaluation d'annuaire isolé (fermé par défaut) :** L'action `connexion_evaluation` sur `/moi` exige conjointement `EVALUATION_TOKEN` (`>= 32` car., `memeSecret`) et le titulaire réservé `tit_evaluation_annuaire` (`0000000`, refusé sur `/demande`) provisionné dans `/exploitant` (état `limite` recommandé). L'évaluateur autorise OAuth 2.1 normalement mais reste en lecture seule stricte sur `/moi` (`403` sur toute mutation), sans envoi de courriel, avec révocation immédiate en un clic (révoquant sessions, codes OAuth et jetons).
 
 ---
 

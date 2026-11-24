@@ -1,7 +1,9 @@
 import {
+  calculerDefiPkceS256,
   creerDepotJetonsD1,
   ecrireEvenementTechniqueD1,
   formaterEvenementTechnique,
+  frapperJeton,
   horodatageIsoUtc,
   incrementerCompteurJourD1,
   jourUtc,
@@ -10,6 +12,7 @@ import {
   scellerCoffre,
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
+import { COURRIEL_EVALUATION_PAR_DEFAUT, ID_TITULAIRE_EVALUATION } from "../src/constantes";
 import { validerCheminRetourInterne } from "../src/securite";
 import {
   CLEF_CANLII_VALIDE_TEST,
@@ -18,9 +21,13 @@ import {
   creerEnvTest,
   creerExecutionContextTest,
   creerFetchSimule,
+  creerLimiteurFenetre,
   extraireCsrfHtml,
   extraireEnteteCookiePair,
+  extraireJetonConsentementHtml,
   reinitialiserBaseIdentite,
+  SECRET_CONSOLE_TEST,
+  SECRET_EVALUATION_TEST,
   SECRET_MAITRE_TEST,
 } from "./helpers";
 
@@ -746,5 +753,373 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     const htmlConnexionOAuth = await resConnexionOAuth.text();
     expect(htmlConnexionOAuth).toContain('href="/demande"');
     expect(htmlConnexionOAuth).toContain("Connexion d'un connecteur OAuth 2.1 en cours");
+  });
+
+  it("isole le compte d'évaluation d'annuaire (fermé par défaut, OAuth 2.1 PKCE complet, /moi lecture seule et révocation 1 clic)", async () => {
+    const db = await reinitialiserBaseIdentite();
+    const boite = creerBoiteCourriel();
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    // 1. Fermé par défaut sans EVALUATION_TOKEN valide (absent ou < 32 car.)
+    for (const secretOff of [undefined, "", "trop_court"]) {
+      const envOff = creerEnvTest({ COURRIEL: boite, EVALUATION_TOKEN: secretOff });
+      const htmlSansSecret = await (
+        await app.fetch(
+          new Request("https://acces.poirierlavoie.ca/moi"),
+          envOff,
+          creerExecutionContextTest(),
+        )
+      ).text();
+      expect(htmlSansSecret).not.toContain('id="carte-evaluation"');
+
+      const resPostOff = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/moi", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            action: "connexion_evaluation",
+            courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+            mot_de_passe_evaluation: SECRET_EVALUATION_TEST,
+          }).toString(),
+        }),
+        envOff,
+        creerExecutionContextTest(),
+      );
+      expect(resPostOff.status).toBe(403);
+    }
+
+    // 2. Provisionnement du compte via /exploitant avec état 'limite'
+    const envEval = creerEnvTest({
+      COURRIEL: boite,
+      EVALUATION_TOKEN: SECRET_EVALUATION_TEST,
+      RL_DEMANDE_IP: creerLimiteurFenetre(10),
+    });
+    const resProvision = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/exploitant", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SECRET_CONSOLE_TEST}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          action: "provisionner_evaluation",
+          courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+          etat_initial: "limite",
+          clef_canlii: CLEF_CANLII_VALIDE_TEST,
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resProvision.status).toBe(200);
+    expect(boite.messages).toHaveLength(0);
+
+    // 3. demander_lien sur evaluation@poirierlavoie.ca répond neutre 200 sans envoyer de courriel
+    const resMagicNeutre = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          action: "demander_lien",
+          courriel: COURRIEL_EVALUATION_PAR_DEFAUT,
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resMagicNeutre.status).toBe(200);
+    expect(boite.messages).toHaveLength(0);
+
+    // 4. Parcours complet OAuth 2.1 + PKCE S256 pour un évaluateur (claude-web)
+    const codeVerifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
+    const codeChallenge = await calculerDefiPkceS256(codeVerifier);
+    const redirectUri = "https://claude.ai/api/mcp/auth_callback";
+    const urlAuthorize =
+      "https://acces.poirierlavoie.ca/oauth/authorize?" +
+      new URLSearchParams({
+        response_type: "code",
+        client_id: "claude-web",
+        redirect_uri: redirectUri,
+        scope: "les_deux",
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+        state: "rev_state_1",
+      }).toString();
+
+    const resRedirMoi = await app.fetch(
+      new Request(urlAuthorize),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resRedirMoi.status).toBe(303);
+    const retourLocation = resRedirMoi.headers.get("Location")!;
+    expect(retourLocation).toMatch(/^\/moi\?retour=/);
+    const retourDecoded = new URL(
+      `https://acces.poirierlavoie.ca${retourLocation}`,
+    ).searchParams.get("retour")!;
+
+    const htmlLoginEval = await (
+      await app.fetch(
+        new Request(`https://acces.poirierlavoie.ca${retourLocation}`),
+        envEval,
+        creerExecutionContextTest(),
+      )
+    ).text();
+    expect(htmlLoginEval).toContain('id="carte-evaluation"');
+
+    // Mauvais secret / mauvais courriel -> 401
+    for (const mauvais of [
+      { courriel: COURRIEL_EVALUATION_PAR_DEFAUT, mdp: "mauvais_mot_de_passe_000000000000" },
+      { courriel: "autre@exemple.ca", mdp: SECRET_EVALUATION_TEST },
+    ]) {
+      const resEchec = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/moi", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            action: "connexion_evaluation",
+            courriel_evaluation: mauvais.courriel,
+            mot_de_passe_evaluation: mauvais.mdp,
+            retour: retourDecoded,
+          }).toString(),
+        }),
+        envEval,
+        creerExecutionContextTest(),
+      );
+      expect(resEchec.status).toBe(401);
+    }
+
+    // Connexion nominale -> 303 vers /oauth/authorize?... + cookie __Host-acces_moi
+    const resLoginEval = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          action: "connexion_evaluation",
+          courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+          mot_de_passe_evaluation: SECRET_EVALUATION_TEST,
+          retour: retourDecoded,
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resLoginEval.status).toBe(303);
+    expect(resLoginEval.headers.get("Location")).toBe(retourDecoded);
+    const cookieEval = extraireEnteteCookiePair(resLoginEval);
+    expect(cookieEval).toContain("__Host-acces_moi=");
+
+    // Écran de consentement OAuth 2.1 + échange /oauth/token
+    const resConsent = await app.fetch(
+      new Request(urlAuthorize, { headers: { Cookie: cookieEval } }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resConsent.status).toBe(200);
+    const htmlConsent = await resConsent.text();
+    expect(htmlConsent).toContain("Autoriser l'accès / Allow access");
+    const jetonConsent = extraireJetonConsentementHtml(htmlConsent);
+
+    const resApprove = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Cookie: cookieEval,
+        },
+        body: new URLSearchParams({
+          jeton_consentement: jetonConsent,
+          decision: "autoriser",
+          response_type: "code",
+          client_id: "claude-web",
+          redirect_uri: redirectUri,
+          scope: "les_deux",
+          code_challenge: codeChallenge,
+          code_challenge_method: "S256",
+          state: "rev_state_1",
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resApprove.status).toBe(303);
+    const codeAuth = new URL(resApprove.headers.get("Location")!).searchParams.get("code")!;
+
+    const resToken = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Origin: "https://claude.ai",
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          client_id: "claude-web",
+          code: codeAuth,
+          redirect_uri: redirectUri,
+          code_verifier: codeVerifier,
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resToken.status).toBe(200);
+    const tokenPayload = (await resToken.json()) as { access_token: string };
+    const depot = creerDepotJetonsD1(db);
+    const resolu = await resoudreJeton(depot, [tokenPayload.access_token], {
+      service: "jurisprudence",
+    });
+    expect(resolu).toMatchObject({
+      titulaireId: ID_TITULAIRE_EVALUATION,
+      etat: "limite",
+      portee: "les_deux",
+    });
+
+    // 5. /moi en lecture seule : formulaires d'écriture absents et rejetés en 403 si forgés
+    const resDash = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", { headers: { Cookie: cookieEval } }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resDash.status).toBe(200);
+    const htmlDash = await resDash.text();
+    expect(htmlDash).toContain("Session d'évaluation d'annuaire en lecture seule");
+    for (const actionMasquee of [
+      "creer_jeton",
+      "revoquer_jeton",
+      "eprouver_clef",
+      "remplacer_clef",
+      "retirer_clef",
+      "basculer_hybride",
+      "exporter_loi25",
+      "supprimer_compte",
+    ]) {
+      expect(htmlDash).not.toContain(`value="${actionMasquee}"`);
+    }
+
+    const csrfEval = extraireCsrfHtml(htmlDash);
+    const actionsInterdites: Array<Record<string, string>> = [
+      { action: "creer_jeton", libelle: "Bypass", portee: "les_deux" },
+      { action: "revoquer_jeton", jeton_id: "jtn_x" },
+      { action: "eprouver_clef" },
+      { action: "remplacer_clef", clef_canlii: CLEF_CANLII_VALIDE_TEST },
+      { action: "retirer_clef" },
+      { action: "basculer_hybride", hybride_permis: "0" },
+      { action: "exporter_loi25" },
+      { action: "supprimer_compte", confirmation: "SUPPRIMER" },
+    ];
+    for (const actionInterdite of actionsInterdites) {
+      const res403 = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/moi", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Cookie: cookieEval,
+          },
+          body: new URLSearchParams({ csrf: csrfEval, ...actionInterdite }).toString(),
+        }),
+        envEval,
+        creerExecutionContextTest(),
+      );
+      expect(res403.status, actionInterdite.action).toBe(403);
+    }
+
+    // 6. Limitation de débit RL_DEMANDE_IP sur connexion_evaluation (429 après dépassement)
+    const rlStrict = creerLimiteurFenetre(2);
+    const envRl = creerEnvTest({
+      COURRIEL: boite,
+      EVALUATION_TOKEN: SECRET_EVALUATION_TEST,
+      RL_DEMANDE_IP: rlStrict,
+    });
+    for (let i = 0; i < 2; i++) {
+      const resTmp = await app.fetch(
+        new Request("https://acces.poirierlavoie.ca/moi", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "CF-Connecting-IP": "198.51.100.77",
+          },
+          body: new URLSearchParams({
+            action: "connexion_evaluation",
+            courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+            mot_de_passe_evaluation: "mauvais_mot_de_passe_000000000000",
+          }).toString(),
+        }),
+        envRl,
+        creerExecutionContextTest(),
+      );
+      expect(resTmp.status).toBe(401);
+    }
+    const res429 = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "CF-Connecting-IP": "198.51.100.77",
+        },
+        body: new URLSearchParams({
+          action: "connexion_evaluation",
+          courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+          mot_de_passe_evaluation: SECRET_EVALUATION_TEST,
+        }).toString(),
+      }),
+      envRl,
+      creerExecutionContextTest(),
+    );
+    expect(res429.status).toBe(429);
+
+    // 7. Déconnexion permise pendant la session lecture seule, puis suspension dans /exploitant coupant reconnexion et jeton OAuth sans courriel
+    const resLogout = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Cookie: cookieEval,
+        },
+        body: new URLSearchParams({ csrf: csrfEval, action: "deconnexion" }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resLogout.status).toBe(303);
+
+    const resSuspend = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/exploitant", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SECRET_CONSOLE_TEST}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          action: "changer_etat",
+          titulaire_id: ID_TITULAIRE_EVALUATION,
+          vers: "suspendu",
+          motif: "demande_titulaire",
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resSuspend.status).toBe(200);
+    expect(boite.messages).toHaveLength(0);
+    expect(
+      await resoudreJeton(depot, [tokenPayload.access_token], { service: "jurisprudence" }),
+    ).toBeNull();
+
+    // Reconnexion refusée une fois suspendu (401)
+    const resReconnSuspendu = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/moi", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          action: "connexion_evaluation",
+          courriel_evaluation: COURRIEL_EVALUATION_PAR_DEFAUT,
+          mot_de_passe_evaluation: SECRET_EVALUATION_TEST,
+        }).toString(),
+      }),
+      envEval,
+      creerExecutionContextTest(),
+    );
+    expect(resReconnSuspendu.status).toBe(401);
   });
 });

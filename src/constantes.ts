@@ -21,6 +21,14 @@ export const EXPEDITEUR_PAR_DEFAUT = "noreply@acces.poirierlavoie.ca";
 export const ORIGINE_PORTAIL_PAR_DEFAUT = "https://acces.poirierlavoie.ca";
 export const CANLII_BASE_URL_PAR_DEFAUT = "https://api.canlii.org/v1";
 
+/** Compte technique isolé pour l'évaluation d'admission aux annuaires (Claude / OpenAI / Google). */
+export const ID_TITULAIRE_EVALUATION = "tit_evaluation_annuaire";
+export const NUMERO_MEMBRE_EVALUATION = "0000000";
+export const COURRIEL_EVALUATION_PAR_DEFAUT = "evaluation@poirierlavoie.ca";
+export const NOM_TITULAIRE_EVALUATION = "Évaluation d'annuaire (Marketplace Review)";
+export const CABINET_TITULAIRE_EVALUATION =
+  "Compte technique isolé et révocable (Claude / OpenAI / Google)";
+
 /** Délai maximal d'examen contradictoire d'une demande écrite de rétablissement (`/cgu`, §10). */
 export const DELAI_RETABLISSEMENT_JOURS_OUVRABLES = 5;
 

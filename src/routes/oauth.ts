@@ -825,8 +825,8 @@ export async function gererRouteAuthorize(
 ${state !== null ? `<input type="hidden" name="state" value="${esc(state)}">` : ""}
 ${resourceNormalisee !== null ? `<input type="hidden" name="resource" value="${esc(resourceNormalisee)}">` : ""}
 <div class="btns">
-<button type="submit" name="decision" value="autoriser" class="btn">Autoriser l'accès</button>
-<button type="submit" name="decision" value="refuser" class="btn-danger">Refuser</button>
+<button type="submit" name="decision" value="autoriser" class="btn">Autoriser l'accès / Allow access</button>
+<button type="submit" name="decision" value="refuser" class="btn-danger">Refuser / Deny</button>
 </div>
 </form>
 </div>`;
