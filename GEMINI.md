@@ -48,7 +48,7 @@ src/
 ├── canlii.ts             sonde en direct caseBrowse/fr/ avec expurger() (G9) et ouvrirCoffre (G8, G10)
 ├── courriel.ts           envois transactionnels via liaison send_email (texte + HTML échappé)
 ├── html/
-│   ├── gabarit.ts        identité visuelle Georgia (CLAIR/SOMBRE symétriques), barre de suite, CSP à nonce unique, bi/biP
+│   ├── gabarit.ts        identité visuelle system-ui (CLAIR/SOMBRE symétriques), barre de suite, CSP à nonce unique, bi/biP
 │   ├── decouverte.ts     /robots.txt, /sitemap.xml et /llms.txt dérivé du code (G22, S20)
 │   ├── accueil.ts        GET / bilingue (FR/EN, cartes d'évaluation des 3 connecteurs, JSON-LD)
 │   └── gouvernance.ts    /cgu, /confidentialite, /attestation, /conformite (S20/G18), /gouverne (S20)
