@@ -171,7 +171,7 @@ ${optionsSections}
 </div>
 <div class="champ">
 <label for="clef_canlii">${bi("Clé REST API CanLII personnelle ou de cabinet (obligatoire — BYOK)", "Personal or firm CanLII REST API key (mandatory — BYOK)")}</label>
-<p id="aide-canlii" class="m"><span data-l="fr">Éprouvée en direct contre <code>caseBrowse/fr/</code> puis chiffrée par enveloppe (<code>HKDF-SHA256</code> + <code>AES-256-GCM</code>). Jamais stockée ni journalisée en clair.</span><span data-l="en" lang="en">Probed live against <code>caseBrowse/fr/</code> then envelope-encrypted (<code>HKDF-SHA256</code> + <code>AES-256-GCM</code>). Never stored or logged in plaintext.</span></p>
+<p id="aide-canlii" class="m"><span data-l="fr">Vérifiée auprès de CanLII lors de l'envoi, puis conservée sous forme chiffrée. Jamais enregistrée ni journalisée en clair (détails techniques sur <code>/conformite</code>).</span><span data-l="en" lang="en">Verified with CanLII upon submission, then stored encrypted. Never saved or logged in plaintext (technical details on <code>/conformite</code>).</span></p>
 <input id="clef_canlii" name="clef_canlii" type="password" required autocomplete="off" aria-describedby="aide-canlii" maxlength="256">
 </div>
 <div class="case">
@@ -192,7 +192,7 @@ ${barreSuite(true, false)}
 <h1>${bi("Demande d'accès (/demande)", "Access Application (/demande)")}</h1>
 ${boutonsEntete(true)}
 </div>
-<p class="m"><a href="/">${bi("← Retour à l'accueil", "← Back to portal")}</a> · <a href="/moi">${bi("Console /moi", "Console /moi")}</a> · <a href="/conformite">/conformite</a></p>
+<p class="m"><a href="/">${bi("← Retour à l'accueil", "← Back to portal")}</a> · <a href="/moi">${bi("Espace /moi", "Portal /moi")}</a> · <a href="/conformite">/conformite</a></p>
 </header>
 ${contenuPrincipal}`;
 
@@ -200,7 +200,7 @@ ${contenuPrincipal}`;
     titrePage: "Demande d'accès — MCP Accès (Barreau du Québec)",
     titrePageEn: "Access Application — MCP Access (Barreau du Québec)",
     descriptionMeta:
-      "Formulaire d'admission réservé aux membres actifs en règle du Barreau du Québec avec épreuve BYOK CanLII.",
+      "Formulaire de demande d'accès réservé aux membres actifs en règle du Barreau du Québec (clé API CanLII requise).",
     corpsHtml: corps,
     bilingue: true,
     noindex: true,
