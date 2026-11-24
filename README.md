@@ -1,21 +1,33 @@
 # MCP-Acces (`acces.poirierlavoie.ca`)
 
-Portail d'admission du Barreau du Québec, coffre chiffré BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation **OAuth 2.1 + PKCE `S256`** pour les connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), adossé au socle partagé [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.3`) et à la base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
+Portail public d'admission et de gestion des accès pour la suite [`droit-civil-quebecois`](https://github.com/jpoirierlavoie/droit-civil-quebecois). Ce service gratuit, exploité à titre collégial sans engagement de niveau de service (SLA), vérifie l'admissibilité des membres actifs en règle du Barreau du Québec, conserve de façon chiffrée la clé API CanLII personnelle de chaque titulaire (BYOK) et autorise la connexion des assistants IA aux connecteurs [`MCP-Legislation`](https://github.com/jpoirierlavoie/MCP-Legislation) (`lois`) et [`MCP-Jurisprudence`](https://github.com/jpoirierlavoie/MCP-Jurisprudence) (`juris`), sans journaliser le contenu des recherches.
+
+> **In English:** Public admission and access-management portal for the [`droit-civil-quebecois`](https://github.com/jpoirierlavoie/droit-civil-quebecois) suite. Provided free of charge for active members in good standing of the Barreau du Québec, it manages membership verification, encrypted storage of each user's personal CanLII API key (BYOK), self-service access management (`/moi`), and browser OAuth 2.1 authorization for `MCP-Legislation` (`lois`) and `MCP-Jurisprudence` (`juris`), without logging search queries.
 
 ---
 
-## Surfaces exposées
+## Pour les avocats (parcours d'accès)
+
+1. **Demande d'accès (`/demande`) :** fournir votre numéro de membre du Barreau du Québec, votre adresse courriel professionnelle et votre clé API CanLII personnelle. La demande est confirmée par courriel (lien valable 30 minutes), puis vérifiée manuellement au *Bottin des avocats*.
+2. **Gestion libre-service (`/moi`) :** une fois le compte activé, gérer vos connexions par navigateur (OAuth 2.1 dans Claude, ChatGPT, Google Antigravity et Gemini), créer ou révoquer des jetons personnels pour scripts ou ligne de commande, mettre à jour ou retirer votre clé CanLII, activer ou désactiver la recherche vectorielle dans `lois`, exporter vos données personnelles (Loi 25) ou supprimer votre compte.
+3. **Connecteur public complémentaire :** [`MCP-Outils`](https://github.com/jpoirierlavoie/MCP-Outils) (`https://outils.poirierlavoie.ca/mcp`) demeure accessible publiquement sans compte ni clé.
+
+---
+
+## Surfaces exposées et architecture technique
+
+Socle partagé : [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.4`) et base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
 
 | Route | Accès | Rôle |
 |---|---|---|
-| `GET /` | Public (survit au coupe-circuit `MCP_ENABLED`) | Page d'accueil bilingue (FR/EN, identité visuelle `system-ui` ardoise/bleu, navigation inter-connecteurs, schéma JSON-LD, zéro actif tiers) présentant les 3 connecteurs, l'admissibilité, le prérequis BYOK CanLII et l'architecture sans journalisation de contenu |
-| `GET /robots.txt`, `/sitemap.xml`, `/llms.txt` | Public (survit au coupe-circuit `MCP_ENABLED`) | Fichiers de découverte pour moteurs de recherche et agents IA dérivés des constantes du code (`S20`), excluant `/moi`, `/oauth/` et `/exploitant` |
-| `GET/POST /demande` & `/demande/confirmer` | Public (`RL_DEMANDE_IP` `10/min`, `namespace_id` `"1031"`) | Admission préalable régie par `MODE_ADMISSION` (`ferme`, `invitation`, `ouvert`), épreuve en direct de la clé API CanLII (`caseBrowse/fr/`), sas anti-squattage `demande_acces` (30 min), promotion atomique après confirmation du courriel (`noreply@acces.poirierlavoie.ca`) et alerte non bloquante à l'exploitant |
-| `GET/POST /moi` & `/moi/connexion` | Titulaire (lien magique `session_portail`, cookie `__Host-acces_moi` `HttpOnly; Secure; SameSite=Lax` + CSRF HMAC) | Frappe/révocation de jetons `frapperJeton()` (affichés une seule fois, portées `les_deux`, `legislation`, `jurisprudence`), extraits prêts à coller (`.mcp.json`, `mcp_config.json`, `gemini-extension.json`, `claude.ai`, Gemini App/Enterprise `/mcp/oauth`, API Gemini Deep Research + préambule `SAFETY-KERNEL`), épreuve/rotation/retrait immédiat de la clé CanLII, bascule `hybride_permis`, quotas du jour, export JSON et suppression intégrale Loi 25 |
-| `GET/POST /exploitant` | Exploitant (`CONSOLE_TOKEN` à temps constant via `memeSecret`) | File d'admission vérifiée avec badges non bloquants de partage d'`empreinte_clef` de cabinet et capture obligatoire de `note_admission` (*Bottin des avocats*), transitions d'état journalisées en ajout seul dans `registre_gouverne` (`G12`), invitations de cohorte, clients OAuth pré-inscrits et indicateurs d'anomalies sans contenu |
+| `GET /` | Public (survit au coupe-circuit `MCP_ENABLED`) | Page d'accueil bilingue (FR/EN, navigation inter-connecteurs, schéma JSON-LD, zéro actif tiers) présentant l'admissibilité, les 3 connecteurs, le parcours d'admission et les engagements de confidentialité |
+| `GET /robots.txt`, `/sitemap.xml`, `/llms.txt` | Public (survit au coupe-circuit `MCP_ENABLED`) | Fichiers de découverte pour moteurs de recherche et assistants dérivés des constantes du code (`S20`), excluant `/moi`, `/oauth/` et `/exploitant` |
+| `GET/POST /demande` & `/demande/confirmer` | Public (`RL_DEMANDE_IP` `10/min`, `namespace_id` `"1031"`) | Admission préalable régie par `MODE_ADMISSION` (`ferme`, `invitation`, `ouvert`), vérification en direct de la clé API CanLII, table d'attente de 30 min avant confirmation du courriel (`noreply@acces.poirierlavoie.ca`) et alerte non bloquante à l'exploitant |
+| `GET/POST /moi` & `/moi/connexion` | Titulaire (lien magique `session_portail`, cookie `__Host-acces_moi` `HttpOnly; Secure; SameSite=Lax` + CSRF HMAC) | Création/révocation de jetons `frapperJeton()` (affichés une seule fois, portées `les_deux`, `legislation`, `jurisprudence`), extraits prêts à coller (`.mcp.json`, `mcp_config.json`, `gemini-extension.json`, `claude.ai`, Gemini App/Enterprise `/mcp/oauth`, API Gemini Deep Research + préambule `SAFETY-KERNEL`), vérification/rotation/retrait immédiat de la clé CanLII, préférence `hybride_permis`, quotas du jour, export JSON et suppression intégrale Loi 25 |
+| `GET/POST /exploitant` | Exploitant (`CONSOLE_TOKEN` à temps constant via `memeSecret`) | File d'admission vérifiée avec indicateurs non bloquants de partage d'`empreinte_clef` de cabinet et saisie obligatoire de `note_admission` (*Bottin des avocats*), journalisation en ajout seul dans `registre_gouverne` (`G12`), invitations de cohorte, clients OAuth pré-inscrits et indicateurs d'anomalies sans contenu |
 | `GET /.well-known/oauth-authorization-server`<br>`POST /oauth/register`<br>`GET/POST /oauth/authorize`<br>`POST /oauth/token`<br>`POST /oauth/revoke` | Clients OAuth 2.1 (`RL_OAUTH_IP` `60/min`, `namespace_id` `"1032"`) | Serveur d'autorisation OAuth 2.1 (RFC 8414, inscription dynamique RFC 7591 sans état signée HMAC sous `COFFRE_MAITRE_V1`, PKCE `S256` obligatoire, clients pré-inscrits `client_oauth` et résolution CIMD anti-SSRF `redirect: "manual"` + rejet `3xx`, échange atomique à usage unique `code_oauth` émettant un `jeton` D1 standard) |
 | `GET /cgu`, `/confidentialite`, `/attestation`, `/conformite`, `/gouverne` | Public (survit au coupe-circuit `MCP_ENABLED`) | Cinq documents de gouvernance, dont `/conformite` (`POLITIQUES_RETENTION_IDENTITE`, `S20`/`G18`) et `/gouverne` (`QUOTAS_ACTIF_PAR_DEFAUT` / `QUOTAS_LIMITE_PAR_DEFAUT`, `S20`) dérivés directement des constantes du code |
-| `scheduled` (`23 7 * * *`) | Interne Cloudflare | Exécution quotidienne des purges indexées de rétention Loi 25 (`purgerRetentionsD1`, `G16`) |
+| `scheduled` (`23 7 * * *`) | Interne Cloudflare | Purges quotidiennes de rétention Loi 25 (`purgerRetentionsD1`, `G16`) |
 
 ---
 

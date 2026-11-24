@@ -112,14 +112,14 @@ ${boutonsEntete(true)}
 </div>
 ${biP(
   [
-    "Portail d'admission, coffre individuel de clés API CanLII et serveur d'autorisation OAuth 2.1 " +
-      "pour les connecteurs MCP Législation et Jurisprudence réservés aux membres actifs en règle " +
-      "du Barreau du Québec.",
+    "Portail d'admission et de gestion des accès pour la suite MCP Droit civil québécois. Il régit " +
+      "l'accès aux connecteurs Législation (lois) et Jurisprudence (juris), réservés aux membres " +
+      "actifs en règle du Barreau du Québec, aux côtés du connecteur public Outils (outils).",
   ],
   [
-    "Admission portal, individual BYOK CanLII API key vault, and OAuth 2.1 authorization server " +
-      "for the Legislation and Case Law MCP connectors reserved for active members in good standing " +
-      "of the Barreau du Québec.",
+    "Admission and access management portal for the Québec Civil Law MCP suite. It governs access " +
+      "to the Legislation (lois) and Case Law (juris) connectors, reserved for active members in " +
+      "good standing of the Barreau du Québec, alongside the public Tools (outils) connector.",
   ],
 )}
 <div class="avert">
@@ -140,7 +140,7 @@ ${biP(
 <p class="btns">
 <a class="btn" href="/demande">${bi("Déposer une demande d'accès", "Apply for access")}</a>
 <a class="btn-sec" href="#connecteurs">${bi("Explorer les 3 connecteurs", "Inspect the 3 connectors")}</a>
-<a class="btn-sec" href="/moi">${bi("Console libre-service (/moi)", "Self-service console (/moi)")}</a>
+<a class="btn-sec" href="/moi">${bi("Espace libre-service (/moi)", "Self-service portal (/moi)")}</a>
 </p>
 </header>
 
@@ -174,14 +174,8 @@ ${biP(
 <section id="connecteurs">
 ${h2("connecteurs")}
 ${biP(
-  [
-    "Évaluez librement le périmètre, les schémas d'outils et les garanties de chaque connecteur avant " +
-      "de déposer une demande d'accès — et testez dès maintenant le connecteur public Outils sans compte :",
-  ],
-  [
-    "Freely inspect the scope, tool schemas, and safeguards of each connector before applying for " +
-      "access — and test the public Tools connector right away with no account:",
-  ],
+  ["Le périmètre, les outils et les limites de chaque connecteur sont documentés publiquement :"],
+  ["The scope, tools, and limits of each connector are documented publicly:"],
 )}
 <div class="grille-cartes">
 ${carteConnecteur({
@@ -191,10 +185,10 @@ ${carteConnecteur({
   badgeEn: "Barreau du Québec · 10 tools",
   descFr:
     "Texte officiel verbatim des lois et règlements du Québec et du Canada, directives de pratique " +
-    "des tribunaux et textes AMF, hiérarchie complète et repérage hybride.",
+    "des tribunaux et textes AMF, avec hiérarchie complète et recherche plein texte.",
   descEn:
     "Official verbatim text of Québec and federal statutes and regulations, court practice " +
-    "directives, and AMF texts, with full hierarchy and hybrid retrieval.",
+    "directives, and AMF texts, with full hierarchy and full-text search.",
   url: "https://legislation.poirierlavoie.ca/",
   ctaFr: "Inspecter Législation →",
   ctaEn: "Inspect Legislation →",
@@ -226,27 +220,22 @@ ${carteConnecteur({
     "Deterministic calculators (C.C.P. deadlines, art. 1619 C.C.Q. interest), court file numbers, " +
     "courthouses, business registries, RQA addresses, and bijural terminology.",
   url: "https://outils.poirierlavoie.ca/",
-  ctaFr: "Explorer et essayer Outils →",
-  ctaEn: "Explore & try Tools now →",
+  ctaFr: "Consulter Outils →",
+  ctaEn: "Inspect Tools →",
 })}
 </div>
 ${biP(
   [
-    "Les connecteurs prennent en charge deux montures complémentaires sur le même registre de 32 " +
-      "outils : la monture OAuth 2.1 par défaut /mcp/oauth (PKCE S256 obligatoire, RFC 9728 / " +
-      "RFC 8414 et inscription dynamique RFC 7591 sans état) permet l'auto-connexion sans clé " +
-      "manuelle dans Claude Code, Claude Desktop, claude.ai, Google Antigravity, Gemini CLI, " +
-      "Gemini App et Vertex AI Gemini Enterprise, tandis que la monture directe /mcp (jeton opaque " +
-      "Bearer, ?key= ou segment de chemin, refus uniforme 404 sans oracle) demeure active pour " +
-      "l'exécution automatisée sans navigateur (CLI/CI) et l'API Gemini Deep Research.",
+    "Deux modes de connexion donnent accès aux mêmes outils : l'autorisation par navigateur " +
+      "OAuth 2.1 (/mcp/oauth, par défaut dans Claude, ChatGPT, Google Antigravity et Gemini) sans " +
+      "clé à copier dans vos fichiers, et l'accès par jeton personnel (/mcp) destiné aux outils " +
+      "en ligne de commande, scripts automatisés et à l'API Gemini Deep Research.",
   ],
   [
-    "The connectors support two complementary mounts over the same 32-tool registry: the default " +
-      "OAuth 2.1 mount /mcp/oauth (mandatory PKCE S256, RFC 9728 / RFC 8414, and stateless " +
-      "RFC 7591 dynamic client registration) enables zero-config auto-connection in Claude Code, " +
-      "Claude Desktop, claude.ai, Google Antigravity, Gemini CLI, Gemini App, and Vertex AI Gemini " +
-      "Enterprise, while the direct /mcp mount (opaque Bearer, ?key=, or path token, uniform 404 " +
-      "refusal with zero oracle) remains active for headless CLI/CI automation and Gemini API Deep Research.",
+    "Two connection modes provide access to the same tools: browser-based OAuth 2.1 authorization " +
+      "(/mcp/oauth, default in Claude, ChatGPT, Google Antigravity, and Gemini) with no key to copy " +
+      "into config files, and personal token access (/mcp) for command-line tools, automated " +
+      "scripts, and Gemini API Deep Research.",
   ],
 )}
 <p><a href="https://github.com/jpoirierlavoie/droit-civil-quebecois">${bi("Greffon cadre droit-civil-quebecois (10 compétences, 59 feuilles de référence)", "Umbrella plugin droit-civil-quebecois (10 skills, 59 reference sheets)")}</a></p>
@@ -256,26 +245,27 @@ ${biP(
 ${h2("admission")}
 ${biP(
   [
-    "1. Clé API CanLII individuelle obligatoire (BYOK) : chaque demandeur fournit sa propre clé " +
-      "REST API CanLII dès /demande. La clé est éprouvée en direct contre caseBrowse/fr/ avant " +
-      "toute mise en file ; il n'existe aucune retombée sur une clé de l'exploitant.",
-    "2. Sas anti-squattage et confirmation du courriel : la demande initiale est placée dans un sas " +
-      "temporaire de 30 minutes sans bloquer votre numéro du Barreau tant que le lien envoyé par " +
-      "noreply@acces.poirierlavoie.ca n'a pas été confirmé.",
-    "3. Vérification humaine au Bottin des avocats : l'exploitant vérifie manuellement l'inscription " +
-      "active au Tableau de l'Ordre avant d'activer le compte. Une fois approuvé, vous frappez vos " +
-      "jetons (affichés une seule fois) ou autorisez vos clients OAuth 2.1 dans /moi.",
+    "1. Clé API CanLII personnelle obligatoire (BYOK) : chaque demandeur fournit sa propre clé " +
+      "REST API CanLII lors de sa demande sur /demande. La clé est vérifiée directement auprès de " +
+      "CanLII à l'envoi ; le service n'utilise jamais une clé de l'exploitant en repli.",
+    "2. Confirmation par courriel (30 minutes) : l'envoi d'une demande transmet un lien à usage " +
+      "unique depuis noreply@acces.poirierlavoie.ca, valable 30 minutes. Une demande non confirmée " +
+      "expire automatiquement sans bloquer votre numéro de membre du Barreau.",
+    "3. Vérification au Bottin des avocats : l'inscription active au Tableau de l'Ordre est " +
+      "vérifiée manuellement avant l'activation du compte. Une fois approuvé, vous gérez vos " +
+      "connexions par navigateur et vos jetons personnels (affichés une seule fois à la création) " +
+      "dans /moi.",
   ],
   [
-    "1. Mandatory individual CanLII API key (BYOK): every applicant supplies their own CanLII REST " +
-      "API key on /demande. The key is probed live against caseBrowse/fr/ before queuing; there is " +
-      "never any fallback to an operator key.",
-    "2. Anti-squatting staging & email confirmation: unconfirmed applications are held in a 30-minute " +
-      "staging table without locking your Barreau number until the confirmation link sent from " +
-      "noreply@acces.poirierlavoie.ca is confirmed.",
-    "3. Manual Bottin des avocats check: the operator manually verifies active enrolment on the Roll " +
-      "of the Order before activating the account. Once approved, you mint your tokens (shown once) " +
-      "or authorize your OAuth 2.1 clients in /moi.",
+    "1. Personal CanLII API key required (BYOK): every applicant provides their own CanLII REST API " +
+      "key on /demande. The key is verified directly with CanLII upon submission; the service " +
+      "never falls back to an operator key.",
+    "2. Email confirmation (30 minutes): submitting /demande sends a single-use confirmation link " +
+      "from noreply@acces.poirierlavoie.ca, valid for 30 minutes. Unconfirmed applications expire " +
+      "automatically without locking your Barreau member number.",
+    "3. Bottin des avocats verification: active enrolment on the Roll of the Order is verified " +
+      "manually before account activation. Once approved, you manage browser connections and " +
+      "personal tokens (displayed once at creation) in /moi.",
   ],
 )}
 </section>
@@ -284,24 +274,26 @@ ${biP(
 ${h2("confidentialite")}
 ${biP(
   [
-    "Zéro journalisation du contenu des recherches : aucune table de requêtes n'existe dans " +
-      "mcp-identite, et les journaux d'invocation Cloudflare (observability / invocation_logs) sont " +
-      "désactivés. Seuls des compteurs journaliers par classe et des événements techniques sans " +
-      "contenu tronqués à la minute UTC (rétention maximale de 90 jours) sont tenus.",
-    "Votre clé CanLII est scellée par enveloppe cryptographique (HKDF-SHA256 + AES-256-GCM avec " +
-      "donnée authentifiée liée à votre identifiant) et n'est déchiffrée qu'en fermeture mémoire " +
-      "éphémère lors d'un appel sortant. Vous pouvez la faire tourner, la retirer immédiatement, " +
-      "désactiver la recherche vectorielle hybride (Workers AI), exporter vos données Loi 25 ou " +
-      "supprimer intégralement votre compte depuis /moi.",
+    "Aucune journalisation du contenu des recherches : le service n'enregistre ni les lois, ni les " +
+      "citations, ni les noms de parties ou extraits consultés par les connecteurs. Les journaux " +
+      "d'exécution sont désactivés ; seuls des compteurs quotidiens par catégorie et des événements " +
+      "techniques sans contenu (conservés au plus 90 jours) sont tenus.",
+    "Protection de votre clé CanLII et contrôle du compte : votre clé API CanLII est chiffrée " +
+      "par compte et déchiffrée en mémoire uniquement le temps d'un appel sortant vers CanLII. " +
+      "Depuis /moi, vous pouvez la remplacer ou la retirer immédiatement, désactiver la recherche " +
+      "vectorielle dans lois, exporter vos données personnelles (Loi 25) ou supprimer intégralement " +
+      "votre compte (spécifications techniques de chiffrement et de conservation sur /conformite).",
   ],
   [
-    "Zero query-content logging: no search query table exists in mcp-identite, and Cloudflare " +
-      "invocation logs (observability / invocation_logs) are disabled. Only daily class counters and " +
-      "content-free technical events truncated to the UTC minute (90-day maximum retention) are kept.",
-    "Your CanLII key is envelope-encrypted (HKDF-SHA256 + AES-256-GCM with AAD bound to your " +
-      "account ID) and is only decrypted inside an ephemeral closure for outbound calls. You can " +
-      "rotate it, remove it immediately, opt out of Workers AI hybrid vector search, export your " +
-      "Law 25 personal data, or permanently erase your account from /moi.",
+    "No logging of search content: the service never records the statutes, citations, party " +
+      "names, or text excerpts queried through the connectors. Application execution logs are " +
+      "disabled; only daily usage counts by category and content-free technical events (kept for " +
+      "at most 90 days) are stored.",
+    "Protection of your CanLII key and account control: your CanLII API key is stored encrypted " +
+      "per account and decrypted in memory only during an outbound call to CanLII. From /moi, you " +
+      "can replace or remove your key immediately, disable semantic vector search in lois, export " +
+      "your personal data (Law 25), or permanently delete your account (full encryption and " +
+      "retention specifications on /conformite).",
   ],
 )}
 </section>
