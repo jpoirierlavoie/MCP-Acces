@@ -215,14 +215,14 @@ ${carteConnecteur({
 ${carteConnecteur({
   titreFr: "Jurisprudence (juris)",
   titreEn: "Case Law (juris)",
-  badgeFr: "Barreau · Votre clé CanLII · 10 outils",
-  badgeEn: "Barreau · Your CanLII key · 10 tools",
+  badgeFr: "Barreau · Votre clé CanLII · 12 outils",
+  badgeEn: "Barreau · Your CanLII key · 12 tools",
   descFr:
-    "Vérification fiable de citations jurisprudentielles, fiches officielles de décisions et listes " +
-    "de citations issues de CanLII (liens directs vers les décisions).",
+    "Vérification fiable de citations jurisprudentielles, fiches officielles, listes " +
+    "d'autorités dispensées de reproduction et citateur issus de CanLII (liens directs vers les décisions).",
   descEn:
-    "Reliable case-citation verification, official decision records, and citation lists backed by " +
-    "CanLII's collection (with direct links to full decisions).",
+    "Reliable case-citation verification, official decision records, courts' " +
+    "exempt-authorities lists, and citator backed by CanLII's collection (with direct links to full decisions).",
   url: "https://jurisprudence.poirierlavoie.ca/",
   ctaFr: "Voir Jurisprudence →",
   ctaEn: "View Case Law →",
@@ -230,14 +230,14 @@ ${carteConnecteur({
 ${carteConnecteur({
   titreFr: "Outils (outils)",
   titreEn: "Tools (outils)",
-  badgeFr: "Public sans compte · 12 outils",
-  badgeEn: "Public, no account · 12 tools",
+  badgeFr: "Public sans compte · 15 outils",
+  badgeEn: "Public, no account · 15 tools",
   descFr:
-    "Calculateurs exacts (délais C.p.c., intérêts art. 1619 C.c.Q.), lecture de numéros de dossier, " +
-    "palais de justice, registres d'entreprises (REQ), adresses civiques et terminologie bijuridique.",
+    "Calculateurs exacts (délais C.p.c., intérêts art. 1619 C.c.Q., taux BdC, IPC, loyer TAL), " +
+    "numéros de dossier, palais de justice, registres (REQ/GLEIF), adresses civiques et terminologie bijuridique.",
   descEn:
-    "Exact calculators (C.C.P. deadlines, art. 1619 C.C.Q. interest), court file number parser, " +
-    "courthouses, corporate registries (REQ), civic addresses, and bijural terminology.",
+    "Exact calculators (C.C.P. deadlines, art. 1619 C.C.Q. interest, BoC rates, CPI, TAL rent), " +
+    "court file numbers, courthouses, corporate registries (REQ/GLEIF), civic addresses, and bijural terminology.",
   url: "https://outils.poirierlavoie.ca/",
   ctaFr: "Voir Outils →",
   ctaEn: "View Tools →",

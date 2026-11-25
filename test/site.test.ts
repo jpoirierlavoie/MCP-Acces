@@ -126,6 +126,9 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(sitemap).not.toContain("/demande");
 
     const llms = await (await demander("/llms.txt")).text();
+    expect(llms).toContain("37 MCP tools across 3 servers");
+    expect(llms).toContain("(`juris`, 12 tools)");
+    expect(llms).toContain("(`outils`, 15 tools");
     expect(llms).toContain("https://legislation.poirierlavoie.ca/");
     expect(llms).toContain("https://jurisprudence.poirierlavoie.ca/");
     expect(llms).toContain("https://outils.poirierlavoie.ca/");
@@ -198,6 +201,10 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     }
 
     const htmlAccueil = await (await demander("/")).text();
+    expect(htmlAccueil).toContain("12 outils");
+    expect(htmlAccueil).toContain("12 tools");
+    expect(htmlAccueil).toContain("15 outils");
+    expect(htmlAccueil).toContain("15 tools");
     expect(htmlAccueil).toContain('href="/" aria-current="page"');
     expect(SECTIONS_ACCUEIL[1]?.id).toBe("connecteurs");
     for (const s of SECTIONS_ACCUEIL) {
@@ -245,6 +252,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(gouverneHtml).toContain(String(QUOTAS_LIMITE_PAR_DEFAUT.local));
     expect(gouverneHtml).toContain("1031");
     expect(gouverneHtml).toContain("1032");
+    expect(gouverneHtml).toContain("list_exempt_cases");
+    expect(gouverneHtml).toContain("check_exempt_cases");
 
     const cguHtml = await (await demander("/cgu")).text();
     expect(cguHtml).toContain("Apache-2.0");
