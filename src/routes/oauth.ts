@@ -804,16 +804,27 @@ export async function gererRouteAuthorize(
           : "client pré-inscrit";
     const identifiantAffiche =
       client.source === "dcr" ? "inscription-dynamique-rfc7591" : client.clientId;
+    const libellePorteeHumain =
+      portee === "les_deux"
+        ? "Législation (lois) et Jurisprudence (juris) / Legislation (lois) and Case Law (juris)"
+        : portee === "legislation"
+          ? "Législation (lois) seulement / Legislation (lois) only"
+          : "Jurisprudence (juris) seulement / Case Law (juris) only";
 
-    const corps = `<header><div class="bar"><h1>Autorisation OAuth 2.1</h1>${boutonsEntete(false)}</div><p class="m">Connecté en tant que <strong>Me ${esc(session.titulaire.nom)}</strong> (<code>${esc(session.titulaire.courriel)}</code>)</p></header>
+    const corps = `<header><div class="bar"><h1>Autoriser l'accès à votre assistant IA</h1>${boutonsEntete(false)}</div><p class="m">Connecté en tant que <strong>Me ${esc(session.titulaire.nom)}</strong> (<code>${esc(session.titulaire.courriel)}</code>)</p></header>
 <div class="carte">
-<h2>Accorder l'accès à « ${esc(client.libelle)} » ?</h2>
+<h2>Autoriser « ${esc(client.libelle)} » ?</h2>
+<p>En autorisant, vous permettez à <strong>${esc(client.libelle)}</strong> de consulter les connecteurs suivants avec votre compte du Barreau du Québec : <strong>${esc(libellePorteeHumain)}</strong>.</p>
+<p class="m">Votre clé API CanLII reste chiffrée sur le portail et n'est jamais transmise à l'assistant ; vos recherches ne sont jamais enregistrées.</p>
+<details>
+<summary>Détails techniques de vérification / Technical verification details</summary>
 <ul>
 <li>Identifiant du client : <code>${esc(identifiantAffiche)}</code> (${badgeSourceClient})</li>
 <li>Hôte de rappel : <code>${esc(origineRedirection)}</code></li>
 <li>Portée demandée : <strong><code>${esc(portee)}</code></strong></li>
 <li>Protection : PKCE <code>S256</code> vérifié</li>
 </ul>
+</details>
 <form method="POST" action="/oauth/authorize">
 <input type="hidden" name="jeton_consentement" value="${esc(jetonConsentement)}">
 <input type="hidden" name="response_type" value="code">
