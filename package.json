@@ -1,6 +1,6 @@
 {
   "name": "mcp-acces",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Portail d'admission Barreau du Québec, coffre BYOK CanLII, console libre-service (/moi), console d'exploitation (/exploitant) et serveur d'autorisation OAuth 2.1 (acces.poirierlavoie.ca).",
   "license": "Apache-2.0",
