@@ -35,6 +35,7 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import { eprouverClefCanliiEnDirect, eprouverEntreeScelleeCanlii } from "../canlii";
 import {
+  ID_TITULAIRE_EVALUATION,
   PREAMBULE_SAFETY_KERNEL_DEEP_RESEARCH,
   SERVICES_MCP,
   USAGE_COFFRE_CANLII,
@@ -48,6 +49,7 @@ import {
   creerIdentifiant,
   effacerCookieMoi,
   estCoffreConfigure,
+  estEvaluationConfiguree,
   estOrigineFormulaireValide,
   lireCookieMoi,
   lireFormulaireBorne,
@@ -58,6 +60,7 @@ import {
   scellerClefCanliiPourTitulaire,
   validerCheminRetourInterne,
   verifierJetonCsrfMoi,
+  verifierMotDePasseEvaluation,
 } from "../securite";
 import type { ContextePortail } from "../types";
 
@@ -363,6 +366,7 @@ function rendrePageConnexionMoi(params: {
   lienEnvoye?: boolean;
   erreur?: string;
   compteSupprime?: boolean;
+  evaluationActive?: boolean;
 }): Response {
   const retourPropre = validerCheminRetourInterne(params.retour);
   let contenu: string;
@@ -395,7 +399,26 @@ ${retourPropre ? `<input type="hidden" name="retour" value="${esc(retourPropre)}
 <input id="courriel" name="courriel" type="email" required maxlength="254">
 </div>
 <p><button type="submit" class="btn">Recevoir mon lien de connexion</button></p>
-</form>`;
+</form>${
+      params.evaluationActive
+        ? `
+<form method="POST" action="/moi" id="carte-evaluation" class="carte">
+<input type="hidden" name="action" value="connexion_evaluation">
+${retourPropre ? `<input type="hidden" name="retour" value="${esc(retourPropre)}">` : ""}
+<h2>Accès évaluateur d'annuaire / Marketplace Reviewer Sign-In</h2>
+<p class="m">Accès isolé en lecture seule réservé aux équipes d'examen (Anthropic, OpenAI, Google). / Isolated read-only sandbox access reserved for marketplace review teams (no email magic link required).</p>
+<div class="champ">
+<label for="courriel_evaluation">Courriel d'évaluation / Reviewer Email</label>
+<input id="courriel_evaluation" name="courriel_evaluation" type="email" required autocomplete="off" maxlength="254">
+</div>
+<div class="champ">
+<label for="mot_de_passe_evaluation">Mot de passe d'évaluation / Reviewer Password</label>
+<input id="mot_de_passe_evaluation" name="mot_de_passe_evaluation" type="password" required autocomplete="off" maxlength="512">
+</div>
+<p><button type="submit" class="btn">Ouvrir la session d'évaluation / Sign in as Reviewer</button></p>
+</form>`
+        : ""
+    }`;
   }
 
   return repondrePageHtml({
@@ -420,6 +443,7 @@ async function rendreTableauDeBordMoi(
   } = {},
 ): Promise<Response> {
   const { titulaire } = session;
+  const estEvaluation = titulaire.id === ID_TITULAIRE_EVALUATION;
   const aujourdhui = jourUtc(contexte.maintenant());
 
   const [compteurs, jetonsRes, coffreLigne] = await Promise.all([
@@ -484,7 +508,7 @@ async function rendreTableauDeBordMoi(
 <td class="m">${esc(j.emis_le.slice(0, 10))}${j.expire_le ? ` → ${esc(j.expire_le.slice(0, 10))}` : ""}</td>
 <td class="m">${actif ? `Actif${j.vu_le ? ` (vu ${esc(j.vu_le)})` : ""}` : `Révoqué (${esc(j.motif_revoc ?? "révoqué")})`}</td>
 <td>${
-              actif
+              actif && !estEvaluation
                 ? `<form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="revoquer_jeton">
@@ -514,6 +538,14 @@ ${boutonsEntete(false)}
 
 ${options.messageSucces ? `<div class="ok"><p>${esc(options.messageSucces)}</p></div>` : ""}
 ${options.messageErreur ? `<div class="err"><p>${esc(options.messageErreur)}</p></div>` : ""}
+${
+  estEvaluation
+    ? `<div class="avert">
+<h2>Session d'évaluation d'annuaire en lecture seule / Read-only Marketplace Reviewer Session</h2>
+<p>Les opérations d'écriture (émission ou révocation manuelle de jetons, modification ou retrait de la clé API CanLII, bascule Workers AI, export ou suppression de compte) sont désactivées pour ce compte technique. / Write operations (manual token issuance/revocation, CanLII key edits/removal, Workers AI toggle, data export, or account deletion) are disabled on this sandbox account.</p>
+</div>`
+    : ""
+}
 ${banniereJetonUnique}
 
 <section id="quotas-jour">
@@ -532,8 +564,10 @@ ${banniereJetonUnique}
 <section id="jetons">
 <h2>Jetons d'accès MCP</h2>
 ${
-  estServi
-    ? `<form method="POST" action="/moi" class="carte">
+  estEvaluation
+    ? `<div class="avert"><p>La frappe et la révocation manuelles de jetons dans <code>/moi</code> sont désactivées pour le compte d'évaluation d'annuaire (les jetons OAuth 2.1 sont émis automatiquement via <code>/oauth/authorize</code>). / Manual token creation and revocation in <code>/moi</code> are disabled on the reviewer account (OAuth 2.1 tokens are issued via <code>/oauth/authorize</code>).</p></div>`
+    : estServi
+      ? `<form method="POST" action="/moi" class="carte">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="creer_jeton">
 <h3>Frapper un nouveau jeton (256 bits)</h3>
@@ -560,7 +594,7 @@ ${
 </div>
 <p><button type="submit" class="btn">Frapper le jeton</button></p>
 </form>`
-    : `<div class="avert"><p>L'émission de nouveaux jetons est désactivée tant que votre compte est à l'état <code>${esc(titulaire.etat)}</code>.</p></div>`
+      : `<div class="avert"><p>L'émission de nouveaux jetons est désactivée tant que votre compte est à l'état <code>${esc(titulaire.etat)}</code>.</p></div>`
 }
 <div class="tw"><table><thead><tr>
 <th>Libellé</th>
@@ -582,7 +616,10 @@ ${construireExtraitsClientsHtml(contexte.originePortail)}
 ${
   coffreLigne
     ? `<p>Clé enregistrée : <code>${esc(coffreLigne.repere)}</code> · État : <strong><code>${esc(coffreLigne.etat)}</code></strong> · Posée le ${esc(coffreLigne.pose_le.slice(0, 10))}${coffreLigne.eprouve_le ? ` · Éprouvée le ${esc(coffreLigne.eprouve_le.slice(0, 10))}` : ""}</p>
-<div class="btns">
+${
+  estEvaluation
+    ? `<p class="m">Clé API CanLII provisionnée par l'exploitant en lecture seule (modification et retrait désactivés). / CanLII API key provisioned by operator in read-only mode (editing and removal disabled).</p>`
+    : `<div class="btns">
 ${
   etatPeutGererClefCanlii(titulaire.etat)
     ? `<form method="POST" action="/moi">
@@ -598,10 +635,11 @@ ${
 <button type="submit" class="btn-danger">Retirer immédiatement la clé du coffre</button>
 </form>
 </div>`
+}`
     : `<p class="avert">Aucune clé CanLII n'est présentement déposée au coffre : <code>MCP-Jurisprudence</code> répondra <code>[CLEF_ABSENTE]</code> (sauf fourniture locale via <code>X-Clef-CanLII</code>).</p>`
 }
 ${
-  etatPeutGererClefCanlii(titulaire.etat)
+  etatPeutGererClefCanlii(titulaire.etat) && !estEvaluation
     ? `<form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="remplacer_clef">
@@ -620,19 +658,26 @@ ${
 <h2>Recherche législative hybride (Cloudflare Workers AI)</h2>
 <div class="carte">
 <p>État actuel : <strong>${titulaire.hybride_permis === 1 ? "Activée (recherche lexicale FTS5 + vectorielle Workers AI)" : "Désactivée (recherche lexicale FTS5 locale uniquement, aucun appel à Workers AI)"}</strong></p>
-<form method="POST" action="/moi">
+${
+  estEvaluation
+    ? `<p class="m">Option verrouillée en lecture seule sur le compte d'évaluation.</p>`
+    : `<form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="basculer_hybride">
 <input type="hidden" name="hybride_permis" value="${titulaire.hybride_permis === 1 ? "0" : "1"}">
 <button type="submit" class="btn-sec">${titulaire.hybride_permis === 1 ? "Désactiver Workers AI (repli FTS5 seul)" : "Réactiver la recherche hybride Workers AI"}</button>
-</form>
+</form>`
+}
 </div>
 </section>
 
 <section id="loi-25">
 <h2>Droits Loi 25 — Portabilité et suppression intégrale du compte</h2>
 <div class="carte">
-<form method="POST" action="/moi">
+${
+  estEvaluation
+    ? `<p class="m">Les fonctions d'export et de suppression Loi 25 sont réservées aux titulaires individuels (ce compte technique est administré et révoqué dans <code>/exploitant</code>).</p>`
+    : `<form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="exporter_loi25">
 <p><button type="submit" class="btn-sec">Télécharger l'export JSON de mes renseignements personnels</button></p>
@@ -646,7 +691,8 @@ ${
 <input id="confirmation_suppression" name="confirmation" type="text" required autocomplete="off" pattern="SUPPRIMER">
 </div>
 <p><button type="submit" class="btn-danger">Supprimer intégralement mon compte</button></p>
-</form>
+</form>`
+}
 </div>
 </section>`;
 
@@ -667,11 +713,14 @@ export async function gererRouteMoi(
 ): Promise<Response> {
   const session = await resoudreSessionMoiActive(request, url, contexte);
 
+  const evaluationActive = estEvaluationConfiguree(contexte.env);
+
   if (request.method === "GET" || request.method === "HEAD") {
     if (!session) {
       return rendrePageConnexionMoi({
         method: request.method,
         retour: url.searchParams.get("retour"),
+        evaluationActive,
       });
     }
     return await rendreTableauDeBordMoi(session, contexte, { method: request.method });
@@ -690,6 +739,7 @@ export async function gererRouteMoi(
     return rendrePageConnexionMoi({
       statut: lecture.statut,
       erreur: lecture.message,
+      evaluationActive,
     });
   }
 
@@ -715,6 +765,7 @@ export async function gererRouteMoi(
         statut: 400,
         retour: retourValide,
         erreur: "Veuillez saisir une adresse courriel valide.",
+        evaluationActive,
       });
     }
 
@@ -733,7 +784,11 @@ export async function gererRouteMoi(
         courriel_verifie_le: string | null;
       }>();
 
-    if (titulaire && titulaire.courriel_verifie_le !== null) {
+    if (
+      titulaire &&
+      titulaire.id !== ID_TITULAIRE_EVALUATION &&
+      titulaire.courriel_verifie_le !== null
+    ) {
       const maintenant = contexte.maintenant();
       const maintenantIso = horodatageIsoUtc(maintenant);
       const expireIso = horodatageIsoUtc(
@@ -770,11 +825,98 @@ export async function gererRouteMoi(
     return rendrePageConnexionMoi({ lienEnvoye: true });
   }
 
+  if (action === "connexion_evaluation") {
+    const debitOk = await debitAcceptable(contexte.env.RL_DEMANDE_IP, contexte.ipClient);
+    if (!debitOk) {
+      return tropDeRequetes(60, null);
+    }
+    const retourCru = validerCheminRetourInterne(champs.get("retour"));
+    if (!evaluationActive || !estCoffreConfigure(contexte.env)) {
+      return rendrePageConnexionMoi({
+        statut: 403,
+        retour: retourCru,
+        evaluationActive: false,
+        erreur:
+          "L'accès évaluateur d'annuaire est présentement désactivé. / Marketplace reviewer access is currently disabled.",
+      });
+    }
+
+    const courriel = normaliserCourriel(champs.get("courriel_evaluation"));
+    const motDePasse = (champs.get("mot_de_passe_evaluation") ?? "").trim();
+    const [motDePasseOk, titulaireEval] = await Promise.all([
+      verifierMotDePasseEvaluation(contexte.env, motDePasse),
+      contexte.env.DB_IDENTITE.prepare(
+        `SELECT id, courriel, etat, courriel_verifie_le
+         FROM titulaire
+         WHERE id = ?1
+         LIMIT 1`,
+      )
+        .bind(ID_TITULAIRE_EVALUATION)
+        .first<{
+          id: string;
+          courriel: string;
+          etat: string;
+          courriel_verifie_le: string | null;
+        }>(),
+    ]);
+
+    if (
+      !motDePasseOk ||
+      !courriel ||
+      !titulaireEval ||
+      titulaireEval.courriel !== courriel ||
+      titulaireEval.courriel_verifie_le === null ||
+      !estEtatServi(titulaireEval.etat)
+    ) {
+      return rendrePageConnexionMoi({
+        statut: 401,
+        retour: retourCru,
+        evaluationActive: true,
+        erreur:
+          "Identifiants d'évaluation invalides ou accès d'évaluation suspendu. / Invalid reviewer credentials or reviewer access suspended.",
+      });
+    }
+
+    const maintenantEval = contexte.maintenant();
+    const maintenantEvalMs = maintenantEval.getTime();
+    const maintenantEvalIso = horodatageIsoUtc(maintenantEval);
+    const jetonSession = frapperJeton();
+    const empreinteSession = await empreinte(jetonSession);
+    const maxAgeSec = DUREE_SESSION_MOI_HEURES * 3_600;
+    const expireSessionIso = horodatageIsoUtc(new Date(maintenantEvalMs + maxAgeSec * 1_000));
+
+    await contexte.env.DB_IDENTITE.prepare(
+      `INSERT INTO session_portail (
+        id, titulaire_id, courriel, type_lien, empreinte, cree_le, expire_le, consomme_le
+      ) VALUES (?1, ?2, ?3, 'session_moi', ?4, ?5, ?6, NULL)`,
+    )
+      .bind(
+        creerIdentifiant("sp"),
+        titulaireEval.id,
+        titulaireEval.courriel,
+        empreinteSession,
+        maintenantEvalIso,
+        expireSessionIso,
+      )
+      .run();
+
+    const estHttpsEval = url.protocol === "https:";
+    return new Response(null, {
+      status: 303,
+      headers: {
+        Location: retourCru ?? "/moi",
+        "Set-Cookie": construireCookieMoi(jetonSession, estHttpsEval, maxAgeSec),
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+
   // Toutes les autres actions exigent une session active ET un jeton CSRF valide
   if (!session) {
     return rendrePageConnexionMoi({
       statut: 401,
       erreur: "Votre session a expiré. Veuillez demander un nouveau lien de connexion.",
+      evaluationActive,
     });
   }
 
@@ -811,6 +953,14 @@ export async function gererRouteMoi(
         "Set-Cookie": effacerCookieMoi(estHttps),
         "Cache-Control": "no-store",
       },
+    });
+  }
+
+  if (session.titulaire.id === ID_TITULAIRE_EVALUATION) {
+    return await rendreTableauDeBordMoi(session, contexte, {
+      statut: 403,
+      messageErreur:
+        "Action désactivée : le compte d'évaluation d'annuaire est en lecture seule. / Action disabled: the marketplace reviewer account is read-only.",
     });
   }
 
@@ -1148,6 +1298,7 @@ export async function gererRouteConnexionMoi(
   const maintenant = contexte.maintenant();
   const maintenantMs = maintenant.getTime();
   const maintenantIso = horodatageIsoUtc(maintenant);
+  const evaluationActive = estEvaluationConfiguree(contexte.env);
 
   if (request.method === "GET" || request.method === "HEAD") {
     const jeton = (url.searchParams.get("jeton") ?? "").trim();
@@ -1157,6 +1308,7 @@ export async function gererRouteConnexionMoi(
         statut: 400,
         method: request.method,
         erreur: "Lien de connexion invalide.",
+        evaluationActive,
       });
     }
 
@@ -1189,6 +1341,7 @@ export async function gererRouteConnexionMoi(
         statut: 400,
         method: request.method,
         erreur: "Ce lien de connexion est expiré ou a déjà été utilisé.",
+        evaluationActive,
       });
     }
 
@@ -1229,6 +1382,7 @@ ${retourValide ? `<input type="hidden" name="retour" value="${esc(retourValide)}
     return rendrePageConnexionMoi({
       statut: lecture.statut,
       erreur: lecture.message,
+      evaluationActive,
     });
   }
 
@@ -1238,6 +1392,7 @@ ${retourValide ? `<input type="hidden" name="retour" value="${esc(retourValide)}
     return rendrePageConnexionMoi({
       statut: 400,
       erreur: "Lien de connexion invalide.",
+      evaluationActive,
     });
   }
 
@@ -1270,6 +1425,7 @@ ${retourValide ? `<input type="hidden" name="retour" value="${esc(retourValide)}
     return rendrePageConnexionMoi({
       statut: 400,
       erreur: "Ce lien de connexion est expiré ou a déjà été utilisé.",
+      evaluationActive,
     });
   }
 
@@ -1285,6 +1441,7 @@ ${retourValide ? `<input type="hidden" name="retour" value="${esc(retourValide)}
     return rendrePageConnexionMoi({
       statut: 400,
       erreur: "Ce lien de connexion vient d'être utilisé.",
+      evaluationActive,
     });
   }
 

@@ -6,7 +6,7 @@ import {
   ouvrirCoffre,
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
-import { COURRIEL_CONTACT_RESPONSABLE } from "../src/constantes";
+import { COURRIEL_CONTACT_RESPONSABLE, NUMERO_MEMBRE_EVALUATION } from "../src/constantes";
 import {
   CLEF_CANLII_VALIDE_TEST,
   creerAppTest,
@@ -853,5 +853,23 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(boite.dernier().to).toBe("acote@cabinet-qc.ca");
     expect(boite.dernier().subject).toContain("existe déjà");
     expect(alertesExploitant()).toHaveLength(1);
+  });
+
+  it("rejette le numéro technique réservé 0000000 sur /demande sans envoyer de courriel", async () => {
+    const boite = creerBoiteCourriel();
+    const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
+    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+
+    const res = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: construireCorpsDemande({ numero_membre: NUMERO_MEMBRE_EVALUATION }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(res.status).toBe(400);
+    expect(boite.messages).toHaveLength(0);
   });
 });

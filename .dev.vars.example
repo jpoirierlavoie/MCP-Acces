@@ -2,3 +2,4 @@
 # Générer chacun avec : openssl rand -hex 32
 COFFRE_MAITRE_V1=remplacer-par-au-moins-32-caracteres-aleatoires-csprng
 CONSOLE_TOKEN=remplacer-par-au-moins-32-caracteres-aleatoires-csprng
+# EVALUATION_TOKEN=remplacer-par-au-moins-32-caracteres-aleatoires-csprng-pendant-evaluation-annuaire
