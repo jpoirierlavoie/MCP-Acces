@@ -8,7 +8,7 @@ Portail d'admission du Barreau du Québec, coffre BYOK de clés API CanLII, cons
 
 ```
              ┌────────────────────────────────────────────────────────┐
-             │      droit-civil-quebecois (Plugin Cadre v3.1.1)       │
+             │      droit-civil-quebecois (Plugin Cadre v3.2.0)       │
              └──────┬───────────────────────┬──────────────────┬──────┘
                     │                       │                  │
         (serveur `lois`, 10 outils)  (serveur `juris`, 12)  (serveur `outils`, 15)
@@ -99,4 +99,4 @@ npx.cmd wrangler deploy --dry-run
 | 1 | **Code, routes, migrations D1 et gardes (`src/`, `migrations/`, `test/`)** | `src/routes/*`, `migrations/0001_initial.sql` (= `construireSchemaIdentiteD1`), `test/` (`workerd` + D1) | Toute modification du parcours `/demande`, de `/moi`, de `/exploitant`, du coffre, d'OAuth 2.1 ou du schéma `mcp-identite` |
 | 2 | **`README.md`, sécurité, licence et Wrangler** | `README.md`, `SECURITY.md`, `LICENSE` (`Apache-2.0`), `NOTICE`, `wrangler.jsonc`, `CLAUDE.md` === `GEMINI.md` | Tout changement de secret, de liaison (`send_email`, `ratelimits`), d'`observability`, de licence ou de procédure de déploiement |
 | 3 | **Pages publiques HTML (`GET /` et les 5 documents `/cgu`, `/confidentialite`, `/attestation`, `/conformite`, `/gouverne`)** | `src/html/*`, `test/site.test.ts` (CSP, absence de CORS, parité bilingue, dérivation `S20`/`G18`) | Toute évolution des conditions d'admission, de la rétention Loi 25, des sous-traitants, des quotas ou de l'identité visuelle |
-| 4 | **Impacts inter-dépôts (`Cross-repository`)** | **`MCP-Socle`** (`#v0.8.4`), **`MCP-Legislation`**, **`MCP-Jurisprudence`**, **`MCP-Outils`** et **`droit-civil-quebecois`** (`v3.1.1`) | Maintenir la cohérence exacte de `DB_IDENTITE`, des portées (`les_deux`, `legislation`, `jurisprudence`), des extraits clients `/moi` et de l'ordre de migration Phases 1 -> 2 -> 3 -> 4 |
+| 4 | **Impacts inter-dépôts (`Cross-repository`)** | **`MCP-Socle`** (`#v0.8.4`), **`MCP-Legislation`**, **`MCP-Jurisprudence`**, **`MCP-Outils`** et **`droit-civil-quebecois`** (`v3.2.0`) | Maintenir la cohérence exacte de `DB_IDENTITE`, des portées (`les_deux`, `legislation`, `jurisprudence`), des extraits clients `/moi` et de l'ordre de migration Phases 1 -> 2 -> 3 -> 4 |
