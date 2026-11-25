@@ -464,7 +464,7 @@ function construireGouverne(): { titre: string; titreEn: string; desc: string; c
         "local",
         QUOTAS_ACTIF_PAR_DEFAUT.local,
         QUOTAS_LIMITE_PAR_DEFAUT.local,
-        "Outils lexicaux/structurels lois, outils juris hors réseau (parse_citation) et lectures servies à 100 % depuis le cache D1",
+        "Outils lexicaux/structurels lois, outils juris hors réseau (parse_citation, list_exempt_cases, check_exempt_cases avec resolve_canlii=false) et lectures servies à 100 % depuis le cache D1",
       ],
       [
         "sortant",
