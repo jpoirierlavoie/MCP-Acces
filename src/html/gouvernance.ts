@@ -135,7 +135,7 @@ ${biP(
   [
     "Les services hébergés sont fournis gratuitement, « TELS QUELS » et selon leur disponibilité, " +
       "sans aucune garantie expresse ou implicite d'exactitude, d'exhaustivité ou de continuité, et " +
-      "sans aucun engagement de niveau de service (zéro SLA). L'exploitant peut suspendre la maintenance " +
+      "sans aucun engagement de disponibilité continue (zéro SLA). L'exploitant peut suspendre la maintenance " +
       "ou mettre fin à l'hébergement moyennant un préavis raisonnable affiché sur la page d'accueil.",
     "Chaque avocat demeure seul et entièrement responsable de la vérification indépendante des textes " +
       "législatifs consolidés officiels, de la lecture intégrale des jugements (l'API de CanLII ne " +
@@ -144,7 +144,7 @@ ${biP(
   ],
   [
     'The hosted services are provided free of charge, "AS IS" and as available, without any express or ' +
-      "implied warranty of accuracy, completeness, or continuity, and with zero service-level agreement " +
+      "implied warranty of accuracy, completeness, or continuity, and with no uptime guarantee " +
       "(zero SLA). The operator may suspend maintenance or discontinue hosting upon reasonable notice " +
       "posted on the home page.",
     "Each lawyer remains solely and exclusively responsible for independent verification of official " +
@@ -158,13 +158,13 @@ ${biP(
 <h2>${bi(`4. Gouverne des comptes et voie écrite de rétablissement (${DELAI_RETABLISSEMENT_JOURS_OUVRABLES} jours ouvrables)`, `4. Account Governance & Written Reinstatement Procedure (${DELAI_RETABLISSEMENT_JOURS_OUVRABLES} Business Days)`)}</h2>
 ${biP(
   [
-    "Tout changement d'état vers limite, suspendu ou revoque résulte d'une décision humaine motivée " +
-      "consignée dans le registre de gouverne et notifiée par courriel au titulaire.",
+    "Toute restriction d'un compte (« limité », « suspendu » ou « révoqué ») résulte d'une décision " +
+      "humaine motivée consignée au registre et notifiée par courriel au titulaire.",
     `Le titulaire visé peut transmettre ses observations écrites ou solliciter le rétablissement de son compte auprès de ${COURRIEL_CONTACT_RESPONSABLE}. L'exploitant s'engage à examiner la demande et à transmettre une réponse écrite motivée dans un délai maximal de ${DELAI_RETABLISSEMENT_JOURS_OUVRABLES} jours ouvrables.`,
   ],
   [
-    "Any transition to limite, suspendu, or revoque is a human decision recorded with a closed reason " +
-      "code in the governance log and notified by email to the account holder.",
+    "Any account restriction (limited, suspended, or revoked) is a human decision recorded with a " +
+      "reason code in the governance log and notified by email to the account holder.",
     `The affected lawyer may submit written observations or request reinstatement by emailing ${COURRIEL_CONTACT_RESPONSABLE}. The operator will review the request and provide a reasoned written response within ${DELAI_RETABLISSEMENT_JOURS_OUVRABLES} business days.`,
   ],
 )}
@@ -214,22 +214,23 @@ ${biP(
     "Seuls sont recueillis les renseignements strictement nécessaires à la vérification de " +
       "l'admissibilité professionnelle et à la sécurité d'accès : nom, numéro de membre et section " +
       "régionale du Barreau du Québec, adresse courriel professionnelle, cabinet (facultatif) et " +
-      "horodatages d'acceptation de l'attestation et des CGU. Sont également conservés la clé API " +
-      "CanLII chiffrée par enveloppe (avec son repère masqué et son empreinte HMAC sous clé maître), " +
-      "les empreintes SHA-256 des jetons émis, les compteurs journaliers par classe d'outil et les " +
-      "événements techniques sans contenu tronqués à la minute UTC.",
-    "Absence totale de collecte du contenu des recherches : ni le texte des requêtes juridiques, ni " +
-      "les identifiants d'articles ou d'arrêts consultés, ni les arguments JSON-RPC ne sont enregistrés.",
+      "dates d'acceptation de l'attestation et des conditions d'utilisation. Sont également conservés " +
+      "votre clé API CanLII sous forme chiffrée (avec un repère masqué et un identifiant technique " +
+      "protégé pour repérer les clés partagées au sein d'un cabinet), les empreintes cryptographiques " +
+      "des jetons d'accès émis, les compteurs quotidiens d'utilisation par catégorie et des " +
+      "événements techniques sans contenu arrondis à la minute UTC.",
+    "Absence totale de collecte du contenu des recherches : ni le texte de vos recherches juridiques, " +
+      "ni les articles ou arrêts consultés, ni les paramètres transmis aux outils ne sont enregistrés.",
   ],
   [
     "Only information strictly necessary for professional eligibility verification and access security " +
       "is collected: name, Barreau du Québec member number and regional section, professional email " +
-      "address, firm name (optional), and attestation and ToU acceptance timestamps. Also stored are " +
-      "the envelope-encrypted CanLII API key (with its masked hint and master-keyed HMAC fingerprint), " +
-      "SHA-256 token hashes, daily tool-class counters, and content-free technical events truncated to " +
-      "the UTC minute.",
-    "Strict absence of query-content collection: neither legal search queries, nor consulted statute " +
-      "or case identifiers, nor JSON-RPC arguments are ever recorded.",
+      "address, firm name (optional), and attestation and Terms acceptance timestamps. Also stored are " +
+      "your encrypted CanLII API key (with a masked hint and a keyed technical identifier to detect " +
+      "firm-shared keys), cryptographic digests of issued access tokens, daily usage counters by " +
+      "category, and content-free technical events truncated to the UTC minute.",
+    "Strict absence of query-content collection: neither your legal search text, nor consulted " +
+      "statute or case identifiers, nor tool parameters are ever recorded.",
   ],
 )}
 </section>
@@ -293,8 +294,9 @@ ${biP(
       "téléchargement massif automatisé.",
     "3. Confidentialité et vérification des sources : J'ai pris connaissance des conditions " +
       "d'utilisation (/cgu) et de la politique de confidentialité (/confidentialite), je n'inclurai " +
-      "aucun fait identifiant un client dans une requête transmise à un planificateur web ouvert, et " +
-      "je vérifierai systématiquement les sources primaires officielles avant tout acte professionnel.",
+      "aucun fait identifiant un client dans une requête transmise à un outil d'IA relié à la recherche " +
+      "sur le Web public, et je vérifierai systématiquement les sources primaires officielles avant tout " +
+      "acte professionnel.",
   ],
   [
     "By submitting an access application on /demande, the legal professional solemnly attests that:",
@@ -306,7 +308,8 @@ ${biP(
       "Terms of Use, including the prohibition on automated bulk downloading.",
     "3. Confidentiality & primary-source verification: I have read the Terms of Use (/cgu) and " +
       "Privacy Policy (/confidentialite), will never include client-identifying facts in queries sent " +
-      "to open-web planners, and will independently verify official primary sources before acting.",
+      "to an AI tool connected to open-web search, and will independently verify official primary " +
+      "sources before acting.",
   ],
 )}
 </section>
@@ -343,6 +346,22 @@ ${boutonsEntete(true)}
 </div>
 ${barreNavigationPublique()}
 </header>
+
+<div class="avert">
+<h2>${bi("En résumé", "In plain terms")}</h2>
+${biP(
+  [
+    "Vos recherches ne sont ni enregistrées ni lisibles par l'exploitant, votre clé CanLII est " +
+      "chiffrée séparément pour votre compte, et les données techniques sans contenu sont purgées " +
+      "automatiquement selon l'horaire vérifié ci-dessous.",
+  ],
+  [
+    "Your searches are neither logged nor readable by the operator, your CanLII key is stored " +
+      "individually encrypted, and content-free technical metadata is purged automatically on the " +
+      "verified schedule below.",
+  ],
+)}
+</div>
 
 <section id="garanties">
 <h2>${bi("1. Ce que l'exploitant ne peut techniquement pas lire", "1. What the Operator Technically Cannot Read")}</h2>
@@ -490,6 +509,22 @@ ${boutonsEntete(true)}
 </div>
 ${barreNavigationPublique()}
 </header>
+
+<div class="avert">
+<h2>${bi("En résumé", "In plain terms")}</h2>
+${biP(
+  [
+    "Chaque avocat dispose de plafonds quotidiens généreux remis à zéro à minuit UTC, les adresses " +
+      "IP partagées (cabinets ou assistants en ligne) ne bloquent pas les confrères, et aucune " +
+      "restriction de compte n'est automatique sans intervention humaine et révision sous 5 jours ouvrables.",
+  ],
+  [
+    "Each lawyer receives generous daily limits that reset at midnight UTC, shared firm or cloud IP " +
+      "addresses never block colleagues, and no account restriction occurs automatically without human " +
+      "review and a 5-business-day written appeal process.",
+  ],
+)}
+</div>
 
 <section id="quotas">
 <h2 id="h-quotas">${bi("1. Quotas journaliers UTC par classe d'outil (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)", "1. Daily UTC Quotas by Tool Class (QUOTAS_ACTIF_PAR_DEFAUT / QUOTAS_LIMITE_PAR_DEFAUT)")}</h2>

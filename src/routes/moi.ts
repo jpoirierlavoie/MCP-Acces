@@ -308,38 +308,46 @@ interaction = client.interactions.create(
 )`;
 
   return `<section id="configurations">
-<h2>Configurations clientes prêtes à coller</h2>
-<p class="m">Depuis la version <code>3.1.0</code>, <code>.mcp.json</code>, <code>mcp_config.json</code> et <code>gemini-extension.json</code> utilisent OAuth 2.1 (<code>/mcp/oauth</code>) sans clé à coller. Pour les environnements sans navigateur ou l'API Gemini Deep Research, la monture directe <code>/mcp</code> (jeton <code>Bearer</code> de portée <code>les_deux</code> ou <code>?key=</code>, et en-tête optionnel <code>X-Clef-CanLII</code> sur <code>juris</code>) demeure active.</p>
+<h2>Guides de connexion par plateforme (avancé)</h2>
+<p class="m">Si vous utilisez Claude Code, Claude Desktop, Antigravity ou Gemini CLI avec le greffon déjà installé, il vous suffit normalement de cliquer sur « Connecter » dans votre assistant. Les configurations ci-dessous servent uniquement pour une connexion manuelle ou automatisée sans navigateur (<code>/mcp</code> avec jeton <code>Bearer</code> ou <code>?key=</code>, et en-tête optionnel <code>X-Clef-CanLII</code> sur <code>juris</code>).</p>
 
 <details>
-<summary>1. Claude Code et Claude Desktop (<code>.mcp.json</code> — OAuth 2.1 sans configuration)</summary>
+<summary>ChatGPT (Web et ordinateur — archive <code>.zip</code> + 3 connecteurs)</summary>
+<p class="m">1) Importez l'archive <code>droit-civil-quebecois-chatgpt-universal.zip</code> (depuis GitHub Releases) ; 2) Dans ChatGPT (<strong>+ → Add custom MCP server</strong>), ajoutez une seule fois ces trois adresses (<code>OAuth</code> pour les deux premières, <code>No authentication</code> pour <code>outils</code>) :</p>
+<pre><code>lois   : https://legislation.poirierlavoie.ca/mcp/oauth
+juris  : https://jurisprudence.poirierlavoie.ca/mcp/oauth
+outils : https://outils.poirierlavoie.ca/mcp</code></pre>
+</details>
+
+<details>
+<summary>1. Claude Code et Claude Desktop (<code>.mcp.json</code> — connexion par navigateur)</summary>
 <pre><code>${esc(mcpJson)}</code></pre>
 </details>
 
 <details>
-<summary>2. Google Antigravity (<code>mcp_config.json</code> — OAuth 2.1 sans configuration)</summary>
+<summary>2. Google Antigravity (<code>mcp_config.json</code> — connexion par navigateur)</summary>
 <pre><code>${esc(antigravityJson)}</code></pre>
 </details>
 
 <details>
-<summary>3. Gemini CLI (<code>gemini-extension.json</code> — OAuth 2.1 sans configuration)</summary>
+<summary>3. Gemini CLI (<code>gemini-extension.json</code> — connexion par navigateur)</summary>
 <pre><code>${esc(geminiExtensionJson)}</code></pre>
 </details>
 
 <details>
-<summary>4. Claude Research (<code>claude.ai</code> / Claude for Work — OAuth 2.1 ou <code>?key=</code>)</summary>
-<p><strong>Mode recommandé (OAuth 2.1 + PKCE <code>S256</code> via <code>${esc(originePortail)}</code>) :</strong></p>
+<summary>4. Claude Web et Claude Research (<code>claude.ai</code> — navigateur ou <code>?key=</code>)</summary>
+<p><strong>Mode recommandé (connexion par navigateur via <code>${esc(originePortail)}</code>) :</strong></p>
 <pre><code>https://legislation.poirierlavoie.ca/mcp/oauth
 https://jurisprudence.poirierlavoie.ca/mcp/oauth
 https://outils.poirierlavoie.ca/mcp</code></pre>
-<p><strong>Variante à jeton direct (poser l'URL complète avant la première sonde) :</strong></p>
+<p><strong>Variante à jeton direct (poser l'URL complète dès la création du connecteur) :</strong></p>
 <pre><code>https://legislation.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;
 https://jurisprudence.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;</code></pre>
 </details>
 
 <details>
 <summary>5. Gemini App (<code>gemini.google.com</code>) et Vertex AI Gemini Enterprise (OAuth 2.1 <code>/mcp/oauth</code>)</summary>
-<p>Ces environnements exigent OAuth 2.1 + PKCE <code>S256</code> (RFC 9728 / RFC 8414) :</p>
+<p>Ces environnements utilisent OAuth 2.1 + PKCE <code>S256</code> (RFC 9728 / RFC 8414) :</p>
 <pre><code>Ressource Législation   : https://legislation.poirierlavoie.ca/mcp/oauth
 Ressource Jurisprudence : https://jurisprudence.poirierlavoie.ca/mcp/oauth
 Serveur d'autorisation  : ${esc(originePortail)}/.well-known/oauth-authorization-server</code></pre>
@@ -384,8 +392,8 @@ function rendrePageConnexionMoi(params: {
   } else {
     const banniereOAuth = retourPropre?.startsWith("/oauth/authorize")
       ? `<div class="avert">
-<p><strong>Connexion d'un connecteur OAuth 2.1 en cours :</strong> saisissez l'adresse courriel professionnelle rattachée à votre compte admis pour recevoir votre lien magique et poursuivre l'autorisation automatiquement.</p>
-<p class="m"><strong>Première visite ?</strong> Les membres actifs du Barreau du Québec doivent d'abord <a href="/demande">déposer une demande d'accès préalable (<code>/demande</code>)</a> avec leur clé API CanLII personnelle avant de pouvoir autoriser <code>lois</code> et <code>juris</code>.</p>
+<p><strong>Connexion d'un connecteur OAuth 2.1 en cours :</strong> saisissez l'adresse courriel professionnelle rattachée à votre compte admis pour recevoir votre lien de connexion par courriel et autoriser l'assistant IA automatiquement.</p>
+<p class="m"><strong>Première visite ?</strong> Les membres actifs du Barreau du Québec doivent d'abord <a href="/demande">déposer une demande d'accès (<code>/demande</code>)</a> avec leur clé API CanLII personnelle avant de pouvoir autoriser <code>lois</code> et <code>juris</code>.</p>
 </div>`
       : "";
     contenu = `${banniereOAuth}${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
@@ -523,7 +531,7 @@ async function rendreTableauDeBordMoi(
 
   const corps = `<header>
 <div class="bar">
-<h1>Console /moi — Me ${esc(titulaire.nom)}</h1>
+<h1>Mon compte (/moi) — Me ${esc(titulaire.nom)}</h1>
 <div class="btns">
 <form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
@@ -533,7 +541,7 @@ async function rendreTableauDeBordMoi(
 ${boutonsEntete(false)}
 </div>
 </div>
-<p class="m">Barreau n°&nbsp;<code>${esc(titulaire.numero_membre)}</code> (${esc(titulaire.section)}) · <code>${esc(titulaire.courriel)}</code> · État : <strong><code>${esc(titulaire.etat)}</code></strong> · <a href="/">Accueil</a></p>
+<p class="m">Barreau n°&nbsp;<code>${esc(titulaire.numero_membre)}</code> (${esc(titulaire.section)}) · <code>${esc(titulaire.courriel)}</code> · Statut du compte : <strong><code>${esc(titulaire.etat)}</code></strong> · <a href="/">Accueil</a></p>
 </header>
 
 ${options.messageSucces ? `<div class="ok"><p>${esc(options.messageSucces)}</p></div>` : ""}
@@ -544,39 +552,110 @@ ${
 <h2>Session d'évaluation d'annuaire en lecture seule / Read-only Marketplace Reviewer Session</h2>
 <p>Les opérations d'écriture (émission ou révocation manuelle de jetons, modification ou retrait de la clé API CanLII, bascule Workers AI, export ou suppression de compte) sont désactivées pour ce compte technique. / Write operations (manual token issuance/revocation, CanLII key edits/removal, Workers AI toggle, data export, or account deletion) are disabled on this sandbox account.</p>
 </div>`
-    : ""
+    : estServi
+      ? `<div class="avert">
+<h2>Utilisateurs de Claude, ChatGPT ou Gemini : aucun jeton à créer ici</h2>
+<p>Si vous avez installé le greffon (via la place de marché ou une archive <code>.zip</code>), connectez simplement <code>lois</code> et <code>juris</code> dans votre assistant IA et ouvrez votre session dans votre navigateur : vous n'avez <strong>pas</strong> besoin de créer un jeton manuel ni de copier de code ci-dessous.</p>
+<p class="m">Sur <code>claude.ai</code> ou ChatGPT (Web / ordinateur : <strong>+ → Add custom MCP server</strong>), ajoutez simplement <code>https://legislation.poirierlavoie.ca/mcp/oauth</code> (OAuth), <code>https://jurisprudence.poirierlavoie.ca/mcp/oauth</code> (OAuth) et <code>https://outils.poirierlavoie.ca/mcp</code> (sans authentification).</p>
+</div>`
+      : ""
 }
 ${banniereJetonUnique}
 
 <section id="quotas-jour">
-<h2>Consommation du jour (${esc(aujourdhui)} UTC)</h2>
+<h2>Utilisation du jour (${esc(aujourdhui)} UTC)</h2>
 <div class="tw"><table><thead><tr>
-<th>Classe d'outil</th>
-<th class="n">Utilisé</th>
+<th>Type d'appel</th>
+<th class="n">Utilisé aujourd'hui</th>
 <th class="n">Plafond quotidien</th>
 </tr></thead><tbody>
-<tr><td><code>local</code></td><td class="n">${compteurs.local}</td><td class="n">${plafonds.local}</td></tr>
-<tr><td><code>sortant</code> (API CanLII)</td><td class="n">${compteurs.sortant}</td><td class="n">${plafonds.sortant}</td></tr>
-<tr><td><code>semantique</code> (Workers AI)</td><td class="n">${compteurs.semantique}</td><td class="n">${plafonds.semantique}</td></tr>
+<tr><td>Recherches de lois et vérifications locales (<code>local</code>)</td><td class="n">${compteurs.local}</td><td class="n">${plafonds.local}</td></tr>
+<tr><td>Appels vers CanLII (<code>sortant</code>)</td><td class="n">${compteurs.sortant}</td><td class="n">${plafonds.sortant}</td></tr>
+<tr><td>Recherches par sens assistées par IA (<code>semantique</code>)</td><td class="n">${compteurs.semantique}</td><td class="n">${plafonds.semantique}</td></tr>
 </tbody></table></div>
 </section>
 
-<section id="jetons">
-<h2>Jetons d'accès MCP</h2>
+<section id="coffre-canlii">
+<h2>Ma clé API CanLII</h2>
+<div class="carte">
+${
+  coffreLigne
+    ? `<p>Clé enregistrée : <code>${esc(coffreLigne.repere)}</code> · Statut : <strong><code>${esc(coffreLigne.etat)}</code></strong> · Enregistrée le ${esc(coffreLigne.pose_le.slice(0, 10))}${coffreLigne.eprouve_le ? ` · Vérifiée le ${esc(coffreLigne.eprouve_le.slice(0, 10))}` : ""}</p>
 ${
   estEvaluation
-    ? `<div class="avert"><p>La frappe et la révocation manuelles de jetons dans <code>/moi</code> sont désactivées pour le compte d'évaluation d'annuaire (les jetons OAuth 2.1 sont émis automatiquement via <code>/oauth/authorize</code>). / Manual token creation and revocation in <code>/moi</code> are disabled on the reviewer account (OAuth 2.1 tokens are issued via <code>/oauth/authorize</code>).</p></div>`
+    ? `<p class="m">Clé API CanLII provisionnée par l'exploitant en lecture seule (modification et retrait désactivés). / CanLII API key provisioned by operator in read-only mode (editing and removal disabled).</p>`
+    : `<div class="btns">
+${
+  etatPeutGererClefCanlii(titulaire.etat)
+    ? `<form method="POST" action="/moi">
+<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
+<input type="hidden" name="action" value="eprouver_clef">
+<button type="submit" class="btn-sec">Vérifier la clé auprès de CanLII</button>
+</form>`
+    : ""
+}
+<form method="POST" action="/moi">
+<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
+<input type="hidden" name="action" value="retirer_clef">
+<button type="submit" class="btn-danger">Retirer immédiatement ma clé</button>
+</form>
+</div>`
+}`
+    : `<p class="avert">Aucune clé CanLII n'est présentement enregistrée dans votre compte : les vérifications CanLII retourneront <code>[CLEF_ABSENTE]</code> (sauf fourniture locale via l'en-tête <code>X-Clef-CanLII</code>).</p>`
+}
+${
+  etatPeutGererClefCanlii(titulaire.etat) && !estEvaluation
+    ? `<form method="POST" action="/moi">
+<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
+<input type="hidden" name="action" value="remplacer_clef">
+<div class="champ">
+<label for="nouvelle_clef_canlii">${coffreLigne ? "Remplacer ma clé API CanLII" : "Enregistrer une clé API CanLII"}</label>
+<input id="nouvelle_clef_canlii" name="clef_canlii" type="password" required autocomplete="off" maxlength="256">
+</div>
+<p><button type="submit" class="btn">Vérifier et enregistrer la clé</button></p>
+</form>`
+    : ""
+}
+</div>
+</section>
+
+<section id="recherche-hybride">
+<h2>Recherche par sens dans les lois (IA)</h2>
+<div class="carte">
+<p>Permet de trouver des articles par proximité de sens (p. ex. « congédiement » trouve « délai de congé ») en plus des mots exacts. Si vous la désactivez, la recherche s'effectue uniquement par mots exacts sur le serveur local.</p>
+<p>État actuel : <strong>${titulaire.hybride_permis === 1 ? "Activée (recherche par mots exacts FTS5 + recherche par sens Workers AI)" : "Désactivée (recherche par mots exacts FTS5 uniquement, aucun appel à Workers AI)"}</strong></p>
+${
+  estEvaluation
+    ? `<p class="m">Option verrouillée en lecture seule sur le compte d'évaluation.</p>`
+    : `<form method="POST" action="/moi">
+<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
+<input type="hidden" name="action" value="basculer_hybride">
+<input type="hidden" name="hybride_permis" value="${titulaire.hybride_permis === 1 ? "0" : "1"}">
+<button type="submit" class="btn-sec">${titulaire.hybride_permis === 1 ? "Désactiver la recherche par sens (mots exacts seulement)" : "Réactiver la recherche par sens (Workers AI)"}</button>
+</form>`
+}
+</div>
+</section>
+
+<section id="jetons">
+<h2>Connexions actives et jetons personnels (avancé)</h2>
+<p class="m">Ce tableau récapitule vos connexions autorisées par navigateur (OAuth 2.1) ainsi que vos jetons manuels pour scripts ou ligne de commande. Vous pouvez révoquer n'importe quel accès en un clic.</p>
+${
+  estEvaluation
+    ? `<div class="avert"><p>La création et la révocation manuelles de jetons dans <code>/moi</code> sont désactivées pour le compte d'évaluation d'annuaire (les jetons OAuth 2.1 sont émis automatiquement via <code>/oauth/authorize</code>). / Manual token creation and revocation in <code>/moi</code> are disabled on the reviewer account (OAuth 2.1 tokens are issued via <code>/oauth/authorize</code>).</p></div>`
     : estServi
-      ? `<form method="POST" action="/moi" class="carte">
+      ? `<details>
+<summary>Créer un jeton personnel (avancé — scripts, ligne de commande et API sans navigateur)</summary>
+<form method="POST" action="/moi" class="carte">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="creer_jeton">
-<h3>Frapper un nouveau jeton (256 bits)</h3>
+<h3>Créer un nouveau jeton personnel</h3>
 <div class="champ">
-<label for="libelle_jeton">Libellé du poste ou de l'intégration</label>
-<input id="libelle_jeton" name="libelle" type="text" required maxlength="80" placeholder="Poste bureau — Claude Code / Antigravity">
+<label for="libelle_jeton">Nom du poste ou du script</label>
+<input id="libelle_jeton" name="libelle" type="text" required maxlength="80" placeholder="Poste bureau — script ou CLI">
 </div>
 <div class="champ">
-<label for="portee_jeton">Portée d'autorisation</label>
+<label for="portee_jeton">Accès autorisé</label>
 <select id="portee_jeton" name="portee">
 <option value="les_deux">les_deux — Législation et Jurisprudence (recommandé)</option>
 <option value="legislation">legislation — Législation seulement</option>
@@ -584,7 +663,7 @@ ${
 </select>
 </div>
 <div class="champ">
-<label for="expiration_jeton">Expiration</label>
+<label for="expiration_jeton">Durée de validité</label>
 <select id="expiration_jeton" name="jours_expiration">
 <option value="90">90 jours</option>
 <option value="30">30 jours</option>
@@ -592,13 +671,14 @@ ${
 <option value="aucune">Sans date d'expiration (révocable à tout moment)</option>
 </select>
 </div>
-<p><button type="submit" class="btn">Frapper le jeton</button></p>
-</form>`
+<p><button type="submit" class="btn">Créer le jeton</button></p>
+</form>
+</details>`
       : `<div class="avert"><p>L'émission de nouveaux jetons est désactivée tant que votre compte est à l'état <code>${esc(titulaire.etat)}</code>.</p></div>`
 }
 <div class="tw"><table><thead><tr>
-<th>Libellé</th>
-<th>Queue</th>
+<th>Nom</th>
+<th>Fin du jeton</th>
 <th>Portée</th>
 <th>Validité</th>
 <th>Statut</th>
@@ -610,69 +690,8 @@ ${lignesJetons}
 
 ${construireExtraitsClientsHtml(contexte.originePortail)}
 
-<section id="coffre-canlii">
-<h2>Coffre chiffré — Clé API CanLII (BYOK)</h2>
-<div class="carte">
-${
-  coffreLigne
-    ? `<p>Clé enregistrée : <code>${esc(coffreLigne.repere)}</code> · État : <strong><code>${esc(coffreLigne.etat)}</code></strong> · Posée le ${esc(coffreLigne.pose_le.slice(0, 10))}${coffreLigne.eprouve_le ? ` · Éprouvée le ${esc(coffreLigne.eprouve_le.slice(0, 10))}` : ""}</p>
-${
-  estEvaluation
-    ? `<p class="m">Clé API CanLII provisionnée par l'exploitant en lecture seule (modification et retrait désactivés). / CanLII API key provisioned by operator in read-only mode (editing and removal disabled).</p>`
-    : `<div class="btns">
-${
-  etatPeutGererClefCanlii(titulaire.etat)
-    ? `<form method="POST" action="/moi">
-<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
-<input type="hidden" name="action" value="eprouver_clef">
-<button type="submit" class="btn-sec">Éprouver en direct auprès de CanLII</button>
-</form>`
-    : ""
-}
-<form method="POST" action="/moi">
-<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
-<input type="hidden" name="action" value="retirer_clef">
-<button type="submit" class="btn-danger">Retirer immédiatement la clé du coffre</button>
-</form>
-</div>`
-}`
-    : `<p class="avert">Aucune clé CanLII n'est présentement déposée au coffre : <code>MCP-Jurisprudence</code> répondra <code>[CLEF_ABSENTE]</code> (sauf fourniture locale via <code>X-Clef-CanLII</code>).</p>`
-}
-${
-  etatPeutGererClefCanlii(titulaire.etat) && !estEvaluation
-    ? `<form method="POST" action="/moi">
-<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
-<input type="hidden" name="action" value="remplacer_clef">
-<div class="champ">
-<label for="nouvelle_clef_canlii">${coffreLigne ? "Remplacer / faire tourner la clé API CanLII" : "Déposer une clé API CanLII"}</label>
-<input id="nouvelle_clef_canlii" name="clef_canlii" type="password" required autocomplete="off" maxlength="256">
-</div>
-<p><button type="submit" class="btn">Éprouver et sceller au coffre</button></p>
-</form>`
-    : ""
-}
-</div>
-</section>
-
-<section id="recherche-hybride">
-<h2>Recherche législative hybride (Cloudflare Workers AI)</h2>
-<div class="carte">
-<p>État actuel : <strong>${titulaire.hybride_permis === 1 ? "Activée (recherche lexicale FTS5 + vectorielle Workers AI)" : "Désactivée (recherche lexicale FTS5 locale uniquement, aucun appel à Workers AI)"}</strong></p>
-${
-  estEvaluation
-    ? `<p class="m">Option verrouillée en lecture seule sur le compte d'évaluation.</p>`
-    : `<form method="POST" action="/moi">
-<input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
-<input type="hidden" name="action" value="basculer_hybride">
-<input type="hidden" name="hybride_permis" value="${titulaire.hybride_permis === 1 ? "0" : "1"}">
-<button type="submit" class="btn-sec">${titulaire.hybride_permis === 1 ? "Désactiver Workers AI (repli FTS5 seul)" : "Réactiver la recherche hybride Workers AI"}</button>
-</form>`
-}
-</div>
-</section>
-
 <section id="loi-25">
-<h2>Droits Loi 25 — Portabilité et suppression intégrale du compte</h2>
+<h2>Mes données (Loi 25) — Exportation et suppression du compte</h2>
 <div class="carte">
 ${
   estEvaluation
@@ -680,7 +699,7 @@ ${
     : `<form method="POST" action="/moi">
 <input type="hidden" name="csrf" value="${esc(session.jetonCsrf)}">
 <input type="hidden" name="action" value="exporter_loi25">
-<p><button type="submit" class="btn-sec">Télécharger l'export JSON de mes renseignements personnels</button></p>
+<p><button type="submit" class="btn-sec">Télécharger mes renseignements personnels (fichier JSON)</button></p>
 </form>
 <hr>
 <form method="POST" action="/moi">
@@ -690,7 +709,7 @@ ${
 <label for="confirmation_suppression">Pour supprimer définitivement votre compte et toutes les données rattachées (irréversible), saisissez <code>SUPPRIMER</code> :</label>
 <input id="confirmation_suppression" name="confirmation" type="text" required autocomplete="off" pattern="SUPPRIMER">
 </div>
-<p><button type="submit" class="btn-danger">Supprimer intégralement mon compte</button></p>
+<p><button type="submit" class="btn-danger">Supprimer définitivement mon compte</button></p>
 </form>`
 }
 </div>

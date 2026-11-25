@@ -170,8 +170,8 @@ ${optionsSections}
 <input id="cabinet" name="cabinet" type="text" autocomplete="organization" maxlength="160" value="${esc(params.valeurs?.cabinet ?? "")}">
 </div>
 <div class="champ">
-<label for="clef_canlii">${bi("Clé REST API CanLII personnelle ou de cabinet (obligatoire — BYOK)", "Personal or firm CanLII REST API key (mandatory — BYOK)")}</label>
-<p id="aide-canlii" class="m"><span data-l="fr">Vérifiée auprès de CanLII lors de l'envoi, puis conservée sous forme chiffrée. Jamais enregistrée ni journalisée en clair (détails techniques sur <code>/conformite</code>).</span><span data-l="en" lang="en">Verified with CanLII upon submission, then stored encrypted. Never saved or logged in plaintext (technical details on <code>/conformite</code>).</span></p>
+<label for="clef_canlii">${bi("Clé API CanLII personnelle ou de cabinet (obligatoire — votre propre clé)", "Personal or firm CanLII API key (mandatory — your own key)")}</label>
+<p id="aide-canlii" class="m"><span data-l="fr">Vous pouvez demander gratuitement une clé API sur <a href="https://www.canlii.org/fr/info/api.html" rel="noopener">canlii.org</a> si vous n'en avez pas encore. Votre clé est vérifiée auprès de CanLII lors de l'envoi, puis conservée sous forme chiffrée et jamais journalisée en clair (détails sur <code>/conformite</code>).</span><span data-l="en" lang="en">You can request a free API key at <a href="https://www.canlii.org/en/info/api.html" rel="noopener">canlii.org</a> if you do not have one yet. Your key is verified with CanLII upon submission, then stored encrypted and never logged in plaintext (details on <code>/conformite</code>).</span></p>
 <input id="clef_canlii" name="clef_canlii" type="password" required autocomplete="off" aria-describedby="aide-canlii" maxlength="256">
 </div>
 <div class="case">
@@ -511,9 +511,9 @@ function rendrePageConfirmationDemande(params: {
   let bloc: string;
   if (params.succes) {
     bloc = `<div class="ok">
-<h2>Adresse courriel confirmée et clé CanLII scellée</h2>
-<p>Votre demande est maintenant enregistrée en file d'admission (état <code>en_attente</code>).</p>
-<p>L'exploitant procédera à la vérification manuelle de votre inscription active au <em>Bottin des avocats</em> du Barreau du Québec. Vous recevrez un courriel dès l'activation de votre compte pour émettre votre premier jeton dans <a href="/moi"><code>/moi</code></a>.</p>
+<h2>Adresse courriel confirmée et clé CanLII enregistrée</h2>
+<p>Votre demande est maintenant enregistrée en file d'admission (statut <code>en_attente</code>).</p>
+<p>Votre inscription active au <em>Bottin des avocats</em> du Barreau du Québec va être vérifiée manuellement. Dès la réception du courriel d'approbation, vous pourrez vous connecter directement depuis votre assistant IA (Claude, ChatGPT, Gemini ou Antigravity) dans votre navigateur — ou consulter <a href="/moi"><code>/moi</code></a> pour gérer votre compte.</p>
 </div>`;
   } else if (params.jetonValide) {
     bloc = `${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
