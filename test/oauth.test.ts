@@ -1184,7 +1184,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
           new URLSearchParams({
             response_type: "code",
-            client_id: `${metaPublic.client_id.slice(0, -1)}0`,
+            client_id: `${metaPublic.client_id.slice(0, -1)}${metaPublic.client_id.endsWith("0") ? "1" : "0"}`,
             redirect_uri: "http://127.0.0.1:54321/oauth-callback",
             code_challenge: defi,
             code_challenge_method: "S256",
