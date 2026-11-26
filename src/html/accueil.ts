@@ -277,7 +277,7 @@ ${biP(
   ],
 )}
 </details>
-<p><a href="https://github.com/jpoirierlavoie/droit-civil-quebecois">${bi("Greffon d'instructions droit-civil-quebecois (10 compétences, 59 feuilles de référence, archive .zip sur GitHub Releases)", "Guidance plugin droit-civil-quebecois (10 skills, 59 reference sheets, .zip archive on GitHub Releases)")}</a></p>
+<p><a href="https://github.com/jpoirierlavoie/droit-civil-quebecois">${bi("Greffon d'instructions droit-civil-quebecois (10 compétences, 60 feuilles de référence, 6 sous-agents, archive .zip sur GitHub Releases)", "Guidance plugin droit-civil-quebecois (10 skills, 60 reference sheets, 6 subagents, .zip archive on GitHub Releases)")}</a></p>
 </section>
 
 <section id="admission">

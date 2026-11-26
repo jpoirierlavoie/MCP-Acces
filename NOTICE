@@ -30,10 +30,12 @@ la documentation originale de ce dépôt. Aucun droit d'auteur, aucune exclusivi
 ni aucun statut officiel n'est revendiqué sur les données ou sources tierces
 desservies par les connecteurs MCP associés (« lois », « juris », « outils ») :
 
-- LégisQuébec (Éditeur officiel du Québec) ;
-- Ministère de la Justice du Canada, Corporations Canada et TERMIUM Plus®
-  (Licence du gouvernement ouvert – Canada / OGL-Canada ; art. 31 L.R.C.
-  (1985), ch. S-20) ;
+- LégisQuébec (Éditeur officiel du Québec, incluant le Règlement sur les
+  critères de fixation de loyer, RLRQ, c. T-15.01, r. 2) ;
+- Ministère de la Justice du Canada, Corporations Canada, TERMIUM Plus® et
+  Statistique Canada / SCHL (tableaux 10-10-0008-01, 18-10-0004-01,
+  18-10-0005-01 et 34-10-0133-01) (Licence du gouvernement ouvert – Canada /
+  OGL-Canada ; art. 31 L.R.C. (1985), ch. S-20) ;
 - Cour supérieure du Québec, Cour du Québec et Autorité des marchés financiers
   (AMF — règlements et Instructions générales) ;
 - CanLII (API REST, clé personnelle BYOK requise, conditions d'utilisation non
@@ -41,7 +43,13 @@ desservies par les connecteurs MCP associés (« lois », « juris », « outils
 - Registraire des entreprises du Québec (REQ) et Office québécois de la langue
   française (OQLF) : données ouvertes sous licence CC BY-NC-SA 4.0 ;
 - RBQ, OPC, AMP (RENA) et MRNF (RQA) : données ouvertes sous licence CC BY 4.0 ;
-- Revenu Québec (art. 28 L.A.F.) et ministère de la Justice du Québec (MJQ).
+- Global Legal Entity Identifier Foundation (GLEIF — Golden Copy Level 1/2 et
+  REPEX) : licence CC0 1.0 Universel ;
+- Banque du Canada (API Valet — taux de change, taux directeur, escompte et
+  préférentiel) : conditions d'utilisation de la Banque du Canada ;
+- Tribunal administratif du logement (TAL — pourcentages annuels et
+  calculateurs), Revenu Québec (art. 28 L.A.F.) et ministère de la Justice du
+  Québec (MJQ).
 
 L'utilisation du portail et des connecteurs hébergés demeure régie par les
 Conditions générales d'utilisation publiées à https://acces.poirierlavoie.ca/cgu.
@@ -49,12 +57,13 @@ Conditions générales d'utilisation publiées à https://acces.poirierlavoie.ca
 ENGLISH — The Apache-2.0 license applies solely to the source code and original
 documentation in this repository. No copyright, exclusivity, or official status
 is claimed over any third-party data or official sources served by the
-associated MCP connectors ("lois", "juris", "outils"), including LégisQuébec,
-Justice Canada / Corporations Canada / TERMIUM Plus® (OGL-Canada), Québec
-Superior Court / Court of Québec / AMF, CanLII (BYOK API Terms), REQ & OQLF
-open data (CC BY-NC-SA 4.0), RBQ / OPC / AMP-RENA / MRNF-RQA (CC BY 4.0),
-Revenu Québec, and MJQ. Use of the hosted portal and connectors remains governed
-by https://acces.poirierlavoie.ca/cgu.
+associated MCP connectors ("lois", "juris", "outils"), including LégisQuébec
+(including CQLR, c. T-15.01, r. 2), Justice Canada / Corporations Canada /
+TERMIUM Plus® / Statistics Canada & CMHC (OGL-Canada), Québec Superior Court /
+Court of Québec / AMF, CanLII (BYOK API Terms), REQ & OQLF open data
+(CC BY-NC-SA 4.0), RBQ / OPC / AMP-RENA / MRNF-RQA (CC BY 4.0), GLEIF (CC0 1.0),
+Bank of Canada (Valet API Terms of Use), TAL, Revenu Québec, and MJQ. Use of the
+hosted portal and connectors remains governed by https://acces.poirierlavoie.ca/cgu.
 
 ================================================================================
 3. AUCUN CONSEIL JURIDIQUE, FOURNITURE « TEL QUEL » ET ABSENCE D'AVAL /

@@ -66,7 +66,7 @@ const LLMS_TXT = [
   "- [MCP Législation (`lois`, 10 tools)](https://legislation.poirierlavoie.ca/): Read-only official verbatim legislation of Québec and Canada, court practice directives, and AMF policy statements. Server Card: https://legislation.poirierlavoie.ca/mcp/server-card",
   "- [MCP Jurisprudence (`juris`, 12 tools)](https://jurisprudence.poirierlavoie.ca/): Read-only Canadian case-law citation verification, decision metadata, citator lists, and 27 compiled exempt-authorities lists backed by CanLII (strict individual BYOK CanLII key). Server Card: https://jurisprudence.poirierlavoie.ca/mcp/server-card",
   "- [MCP Outils (`outils`, 15 tools — Public, no account required)](https://outils.poirierlavoie.ca/): Deterministic C.C.P. deadlines, art. 1619 C.C.Q. legal interest, BoC FX/policy rates, CPI & TAL rent calculators, court file numbers & courthouses, business registries (REQ/RBQ/OPC/RENA/Corporations Canada/GLEIF), civic addresses (RQA), and bijural terminology. Public endpoint: `https://outils.poirierlavoie.ca/mcp` · Server Card: https://outils.poirierlavoie.ca/mcp/server-card",
-  "- [Plugin Repository (`droit-civil-quebecois`)](https://github.com/jpoirierlavoie/droit-civil-quebecois): 10 skills, 59 reference sheets, and 4 Python stdlib verification scripts for Claude and Google Gemini / Antigravity.",
+  "- [Plugin Repository (`droit-civil-quebecois`)](https://github.com/jpoirierlavoie/droit-civil-quebecois): 10 skills, 60 reference sheets, 6 stateless review subagents, and 4 Python stdlib verification scripts for Claude, ChatGPT / Codex, and Google Gemini / Antigravity.",
   "",
   "## Eligibility, Privacy & Quotas (derived from live code)",
   "",

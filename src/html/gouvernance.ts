@@ -76,9 +76,9 @@ ${biP(
       "(identifiant SPDX : Apache-2.0 ; voir LICENSE et NOTICE).",
     "La licence Apache-2.0 porte exclusivement sur les logiciels, schémas et documents originaux des " +
       "dépôts. Aucun droit d'auteur ni statut officiel n'est revendiqué sur les textes juridiques, la " +
-      "jurisprudence ou les données ouvertes desservis à l'exécution (LégisQuébec, Justice Canada, " +
+      "jurisprudence ou les données ouvertes desservis à l'exécution (LégisQuébec dont le Règlement sur les critères de fixation de loyer, RLRQ, c. T-15.01, r. 2, Justice Canada, " +
       "QCCS/QCCQ/AMF, CanLII BYOK, REQ et OQLF sous CC BY-NC-SA 4.0, RBQ/OPC/RENA/RQA sous CC BY 4.0, " +
-      "TERMIUM Plus® sous OGL-Canada, Revenu Québec et MJQ), lesquels demeurent régis par les conditions " +
+      "Statistique Canada / SCHL et TERMIUM Plus® sous OGL-Canada, GLEIF sous CC0 1.0, Banque du Canada (API Valet), TAL, Revenu Québec et MJQ), lesquels demeurent régis par les conditions " +
       "de leurs éditeurs respectifs décrites dans NOTICE.",
     "Les membres actifs en règle du Barreau du Québec admis sur le présent portail (et les membres de " +
       "leur cabinet agissant sous leur supervision) sont autorisés à titre gratuit à employer les " +
@@ -93,8 +93,8 @@ ${biP(
       "and NOTICE).",
     "Apache-2.0 applies solely to the original software, schemas, and documentation in the repositories. " +
       "Zero copyright or official status is claimed over third-party statutes, case law, or open datasets " +
-      "served at runtime (LégisQuébec, Justice Canada, QCCS/QCCQ/AMF, CanLII BYOK, REQ and OQLF under " +
-      "CC BY-NC-SA 4.0, RBQ/OPC/RENA/RQA under CC BY 4.0, TERMIUM Plus® under OGL-Canada, Revenu Québec, " +
+      "served at runtime (LégisQuébec including CQLR, c. T-15.01, r. 2, Justice Canada, QCCS/QCCQ/AMF, CanLII BYOK, REQ and OQLF under " +
+      "CC BY-NC-SA 4.0, RBQ/OPC/RENA/RQA under CC BY 4.0, Statistics Canada / CMHC and TERMIUM Plus® under OGL-Canada, GLEIF under CC0 1.0, Bank of Canada (Valet API), TAL, Revenu Québec, " +
       "and MJQ), which remain governed by each publisher's terms documented in NOTICE.",
     "Admitted active members in good standing of the Barreau du Québec (and supervised firm members) " +
       "are authorized free of charge to use the hosted connectors in the ordinary course of practising " +

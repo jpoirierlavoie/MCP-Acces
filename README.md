@@ -17,7 +17,7 @@ Portail public d'admission et de gestion des accès pour la suite [`droit-civil-
 
 ## Surfaces exposées et architecture technique
 
-Socle partagé : [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.4`) et base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
+Socle partagé : [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.5`) et base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
 
 | Route | Accès | Rôle |
 |---|---|---|
@@ -59,7 +59,7 @@ npx.cmd wrangler deploy --dry-run
    # Facultatif (examen annuaires Claude / OpenAI / Google uniquement) :
    # npx.cmd wrangler secret put EVALUATION_TOKEN
    ```
-4. Déployer (migrations D1 d'abord via `scripts/deployer.mjs`, puis Worker ; `.github/workflows/deploy.yml` assure ensuite le déploiement continu sur `main`) :
+4. Déployer manuellement depuis un poste autorisé (migrations D1 d'abord via `scripts/deployer.mjs`, puis Worker via `npm.cmd run deploy` — aucun `CLOUDFLARE_API_TOKEN` n'est stocké en CI ; la sonde quotidienne `.github/workflows/verifier-deploiement.yml` vérifie l'alignement de `/health` sur `main`) :
    ```powershell
    $env:CLOUDFLARE_API_TOKEN = (Get-Content cf.token -Raw).Trim()
    npm.cmd run deploy
