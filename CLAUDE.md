@@ -1,6 +1,6 @@
 # MCP-Acces — Architecture, principes et consignes de travail
 
-Portail d'admission du Barreau du Québec, coffre BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation OAuth 2.1 (`https://acces.poirierlavoie.ca`), adossé au socle partagé `@poirierlavoie/mcp-socle` (`#v0.8.5`) et à la base Cloudflare D1 `mcp-identite` (`DB_IDENTITE`). Ce document gouverne de manière identique Claude et Gemini / Antigravity (`CLAUDE.md` et `GEMINI.md` doivent rester identiques octet pour octet et sous 24 000 octets UTF-8 LF).
+Portail d'admission du Barreau du Québec, coffre BYOK de clés API CanLII, console libre-service (`/moi`), console d'exploitation (`/exploitant`) et serveur d'autorisation OAuth 2.1 (`https://acces.poirierlavoie.ca`), adossé au socle partagé `@poirierlavoie/mcp-socle` (`#v0.8.6`) et à la base Cloudflare D1 `mcp-identite` (`DB_IDENTITE`). Ce document gouverne de manière identique Claude et Gemini / Antigravity (`CLAUDE.md` et `GEMINI.md` doivent rester identiques octet pour octet et sous 24 000 octets UTF-8 LF).
 
 ---
 
@@ -27,7 +27,7 @@ Portail d'admission du Barreau du Québec, coffre BYOK de clés API CanLII, cons
                     │    │  (11 tables) │          │ acces.poirier...ca │
                     │    └──────────────┘          │ /demande /moi OAuth│
                     └───────────┬──────────────────┴────────┬───────────┘
-                                ▼ (`#v0.8.5`, zéro dep prod)▼
+                                ▼ (`#v0.8.6`, zéro dep prod)▼
                  ┌──────────────────────────────────────────────┐
                  │                  MCP-Socle                   │
                  └──────────────────────────────────────────────┘
@@ -64,7 +64,7 @@ src/
 
 ## 3. Invariants critiques et portes de sécurité
 
-1. **Zéro dépendance d'exécution (`G1`) :** `package.json` ne déclare aucune `dependencies`. Tout le code repose sur les API Web Standards de Cloudflare Workers et `@poirierlavoie/mcp-socle` (`#v0.8.5` empaqueté au build).
+1. **Zéro dépendance d'exécution (`G1`) :** `package.json` ne déclare aucune `dependencies`. Tout le code repose sur les API Web Standards de Cloudflare Workers et `@poirierlavoie/mcp-socle` (`#v0.8.6` empaqueté au build).
 2. **Fermé par défaut (`G21`, `G22`) :** `MCP_ENABLED !== "true"` renvoie `404` sur toutes les routes opérationnelles (`/demande*`, `/moi*`, `/exploitant`, `/oauth/*`, `/.well-known/*`, `/health`) mais conserve `200` sur `GET /` et les 5 documents publics. L'absence de `COFFRE_MAITRE_V1` ou `CONSOLE_TOKEN` échoue systématiquement fermée.
 3. **Zéro journalisation de contenu et d'invocation (`G9`, `G13`, `G25`, `G37`) :** Aucun `console.*` dans `src/` ; `observability.enabled = false` et `invocation_logs = false` dans `wrangler.jsonc` ; `verifierSchemaSansContenuIdentifiant` = `[]`.
 4. **Coffre à fermeture stricte (`G8`, `G10`) :** Aucune fonction exportée ne retourne une clé déchiffrée en clair ; toute ré-épreuve d'une entrée scellée passe par `ouvrirCoffre`.
@@ -100,4 +100,4 @@ npx.cmd wrangler deploy --dry-run
 | 1 | **Code, routes, migrations D1 et gardes (`src/`, `migrations/`, `test/`)** | `src/routes/*`, `migrations/0001_initial.sql` (= `construireSchemaIdentiteD1`), `test/` (`workerd` + D1) | Toute modification du parcours `/demande`, de `/moi`, de `/exploitant`, du coffre, d'OAuth 2.1 ou du schéma `mcp-identite` |
 | 2 | **`README.md`, sécurité, licence et Wrangler** | `README.md`, `SECURITY.md`, `LICENSE` (`Apache-2.0`), `NOTICE`, `wrangler.jsonc`, `CLAUDE.md` === `GEMINI.md` | Tout changement de secret, de liaison (`send_email`, `ratelimits`), d'`observability`, de licence ou de procédure de déploiement |
 | 3 | **Pages publiques HTML (`GET /` et les 5 documents `/cgu`, `/confidentialite`, `/attestation`, `/conformite`, `/gouverne`)** | `src/html/*`, `test/site.test.ts` (CSP, absence de CORS, parité bilingue, dérivation `S20`/`G18`) | Toute évolution des conditions d'admission, de la rétention Loi 25, des sous-traitants, des quotas ou de l'identité visuelle |
-| 4 | **Impacts inter-dépôts (`Cross-repository`)** | **`MCP-Socle`** (`#v0.8.5`), **`MCP-Legislation`**, **`MCP-Jurisprudence`**, **`MCP-Outils`** et **`droit-civil-quebecois`** (`v3.3.1`) | Maintenir la cohérence exacte de `DB_IDENTITE`, des portées (`les_deux`, `legislation`, `jurisprudence`), des extraits clients `/moi` et de l'ordre de migration Phases 1 -> 2 -> 3 -> 4 |
+| 4 | **Impacts inter-dépôts (`Cross-repository`)** | **`MCP-Socle`** (`#v0.8.6`), **`MCP-Legislation`**, **`MCP-Jurisprudence`**, **`MCP-Outils`** et **`droit-civil-quebecois`** (`v3.3.1`) | Maintenir la cohérence exacte de `DB_IDENTITE`, des portées (`les_deux`, `legislation`, `jurisprudence`), des extraits clients `/moi` et de l'ordre de migration Phases 1 -> 2 -> 3 -> 4 |
