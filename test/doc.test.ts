@@ -80,9 +80,16 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(taille).toBeGreaterThan(1_000);
     expect(taille).toBeLessThan(24_000);
     expect(geminiMd).toContain("# MCP-Acces");
-    expect(geminiMd).toContain("#v0.8.4");
+    expect(geminiMd).toContain("#v0.8.5");
+    expect(geminiMd).not.toContain("#v0.8.4");
     expect(geminiMd).not.toContain("#v0.8.3");
     expect(geminiMd).not.toContain("#v0.8.2");
+    expect(securityMd).toContain("#v0.8.5");
+    expect(securityMd).not.toContain("#v0.8.4");
+    expect(securityMd).not.toContain("#v0.8.3");
+    expect(readmeMd).toContain("#v0.8.5");
+    expect(readmeMd).not.toContain("#v0.8.4");
+    expect(readmeMd).not.toContain(".github/workflows/deploy.yml");
   });
 
   it("LICENSE conserve Apache-2.0 et NOTICE porte les attributions officielles", () => {
@@ -92,6 +99,12 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(noticeRaw).toContain("LégisQuébec");
     expect(noticeRaw).toContain("CanLII");
     expect(noticeRaw).toContain("CC BY-NC-SA 4.0");
+    expect(noticeRaw).toContain("GLEIF");
+    expect(noticeRaw).toContain("CC0 1.0");
+    expect(noticeRaw).toContain("Valet");
+    expect(noticeRaw).toContain("Statistique Canada");
+    expect(noticeRaw).toContain("Statistics Canada");
+    expect(noticeRaw).toContain("T-15.01, r. 2");
   });
 
   it("README.md et SECURITY.md ne référencent aucun ancien nom de dépôt retiré", () => {

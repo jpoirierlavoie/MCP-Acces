@@ -129,6 +129,9 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(llms).toContain("37 MCP tools across 3 servers");
     expect(llms).toContain("(`juris`, 12 tools)");
     expect(llms).toContain("(`outils`, 15 tools");
+    expect(llms).toContain(
+      "10 skills, 60 reference sheets, 6 stateless review subagents, and 4 Python stdlib verification scripts for Claude, ChatGPT / Codex, and Google Gemini / Antigravity.",
+    );
     expect(llms).toContain("https://legislation.poirierlavoie.ca/");
     expect(llms).toContain("https://jurisprudence.poirierlavoie.ca/");
     expect(llms).toContain("https://outils.poirierlavoie.ca/");
@@ -205,6 +208,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(htmlAccueil).toContain("12 tools");
     expect(htmlAccueil).toContain("15 outils");
     expect(htmlAccueil).toContain("15 tools");
+    expect(htmlAccueil).toContain("60 feuilles de référence, 6 sous-agents");
+    expect(htmlAccueil).toContain("60 reference sheets, 6 subagents");
     expect(htmlAccueil).toContain('href="/" aria-current="page"');
     expect(SECTIONS_ACCUEIL[1]?.id).toBe("connecteurs");
     for (const s of SECTIONS_ACCUEIL) {
@@ -261,5 +266,12 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(cguHtml).toContain("avocat plaideur en exercice");
     expect(cguHtml).toContain("zéro SLA");
     expect(cguHtml).toContain("5 jours ouvrables");
+    expect(cguHtml).toContain("GLEIF");
+    expect(cguHtml).toContain("CC0 1.0");
+    expect(cguHtml).toContain("Banque du Canada");
+    expect(cguHtml).toContain("Bank of Canada");
+    expect(cguHtml).toContain("Statistique Canada");
+    expect(cguHtml).toContain("Statistics Canada");
+    expect(cguHtml).toContain("T-15.01, r. 2");
   });
 });

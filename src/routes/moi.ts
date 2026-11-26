@@ -234,20 +234,23 @@ function construireExtraitsClientsHtml(originePortail: string): string {
   const geminiExtensionJson = JSON.stringify(
     {
       name: "droit-civil-quebecois",
-      version: "3.2.0",
+      version: "3.3.1",
       description:
-        "Recherche, analyse, rédaction, administration du litige et déontologie en droit civil et commercial québécois. Connecteurs « lois », « juris » et « outils ».",
+        "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
       contextFileName: [],
       settings: [],
       mcpServers: {
         lois: {
-          httpUrl: "https://legislation.poirierlavoie.ca/mcp/oauth",
+          type: "http",
+          url: "https://legislation.poirierlavoie.ca/mcp/oauth",
         },
         juris: {
-          httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
+          type: "http",
+          url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
-          httpUrl: "https://outils.poirierlavoie.ca/mcp",
+          type: "http",
+          url: "https://outils.poirierlavoie.ca/mcp",
         },
       },
     },

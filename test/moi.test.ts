@@ -207,6 +207,9 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(htmlMoi).toContain("gemini-extension.json");
     expect(htmlMoi).toContain("/mcp/oauth");
     expect(htmlMoi).toContain("deep-research-preview-04-2026");
+    expect(htmlMoi).toContain(
+      "sur `403` sur requête libre `query` sur `lois`, `juris` ou `outils`, reformuler sans apostrophes, guillemets ni opérateurs SQL, ou lire par article exact; si le `403` persiste, traiter comme blocage",
+    );
     expect(htmlMoi).toContain("[RATIO / PAR. X À INSÉRER APRÈS LECTURE DE");
     expect(htmlMoi).not.toContain(CLEF_CANLII_VALIDE_TEST);
     const csrf = extraireCsrfHtml(htmlMoi);
@@ -720,19 +723,24 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       mcpServers: Record<string, Record<string, unknown>>;
     };
     expect(geminiJson.name).toBe("droit-civil-quebecois");
-    expect(geminiJson.version).toBe("3.2.0");
-    expect(geminiJson.description).toContain("Connecteurs « lois », « juris » et « outils »");
+    expect(geminiJson.version).toBe("3.3.1");
+    expect(geminiJson.description).toBe(
+      "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
+    );
     expect(geminiJson.contextFileName).toEqual([]);
     expect(geminiJson.settings).toEqual([]);
     expect(geminiJson.mcpServers).toEqual({
       lois: {
-        httpUrl: "https://legislation.poirierlavoie.ca/mcp/oauth",
+        type: "http",
+        url: "https://legislation.poirierlavoie.ca/mcp/oauth",
       },
       juris: {
-        httpUrl: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
+        type: "http",
+        url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
       },
       outils: {
-        httpUrl: "https://outils.poirierlavoie.ca/mcp",
+        type: "http",
+        url: "https://outils.poirierlavoie.ca/mcp",
       },
     });
 
