@@ -1139,7 +1139,23 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resBadGrant.status).toBe(400);
     expect(((await resBadGrant.json()) as { error: string }).error).toBe("invalid_client_metadata");
 
-    // 2. Inscription publique sans état (Antigravity loopback /oauth-callback, refresh_token ignoré)
+    // 2. Inscription publique sans état (Antigravity distant /oauth/callback + loopback /oauth-callback)
+    const resRegAntigravityRemote = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/oauth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_name: "Antigravity Cloud",
+          redirect_uris: ["https://antigravity.google.com/oauth/callback"],
+          grant_types: ["authorization_code"],
+          response_types: ["code"],
+          token_endpoint_auth_method: "none",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resRegAntigravityRemote.status).toBe(201);
     const resRegPublic = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/register", {
         method: "POST",
