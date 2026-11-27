@@ -256,17 +256,21 @@ ${biP(
 ${biP(
   [
     "Les connecteurs proposent deux points d'entrée donnant accès aux mêmes outils : la connexion " +
-      "interactive par navigateur OAuth 2.1 (/mcp/oauth, utilisée par défaut dans Claude, ChatGPT, " +
-      "Google Antigravity et Gemini) et l'accès par jeton personnel (/mcp) destiné aux outils en " +
-      "ligne de commande, aux scripts automatisés et à l'API Gemini Deep Research.",
+      "interactive par navigateur OAuth 2.1 (/mcp/oauth, portée universelle « tous » rétrocompatible " +
+      "avec « les_deux » et portées par service « legislation », « jurisprudence », « outils », utilisée " +
+      "par défaut dans Claude, ChatGPT, Google Antigravity et Gemini) et l'accès par jeton personnel " +
+      "Bearer sur /mcp (retournant un 404 uniforme sans jeton valide) destiné aux outils en ligne de " +
+      "commande, aux scripts automatisés et à l'API Gemini Deep Research.",
     "Adresses des connecteurs : https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
       "https://jurisprudence.poirierlavoie.ca/mcp/oauth (juris) et " +
       "https://outils.poirierlavoie.ca/mcp/oauth (outils).",
   ],
   [
     "Two connection endpoints expose the same tools: browser-based OAuth 2.1 authorization " +
-      "(/mcp/oauth, default in Claude, ChatGPT, Google Antigravity, and Gemini) and personal token " +
-      "access (/mcp) for command-line tools, automated scripts, and Gemini API Deep Research.",
+      "(/mcp/oauth, universal scope « tous » backwards-compatible with « les_deux » and per-service " +
+      "scopes « legislation », « jurisprudence », « outils », default in Claude, ChatGPT, Google " +
+      "Antigravity, and Gemini) and personal Bearer token access on /mcp (returning a uniform 404 " +
+      "without a valid token) for command-line tools, automated scripts, and Gemini API Deep Research.",
     "Connector URLs: https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
       "https://jurisprudence.poirierlavoie.ca/mcp/oauth (juris), and " +
       "https://outils.poirierlavoie.ca/mcp/oauth (outils).",

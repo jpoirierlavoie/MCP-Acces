@@ -201,7 +201,10 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(htmlMoi).toContain("/mcp/oauth");
     expect(htmlMoi).toContain("deep-research-preview-04-2026");
     expect(htmlMoi).toContain(
-      "sur `403` sur requête libre `query` sur `lois`, `juris` ou `outils`, reformuler sans apostrophes, guillemets ni opérateurs SQL, ou lire par article exact; si le `403` persiste, traiter comme blocage",
+      "Si un connecteur requis (`lois`, `juris` ou `outils`) échoue (`401`, `403`, `404`, `429`, `[CLEF_ABSENTE]`, `[CLEF_REFUSEE]`, `QUOTA_EPUISE`, hors ligne — sur `403` sur requête libre `query`, reformuler sans apostrophes, guillemets ni opérateurs SQL, ou lire par article exact; si le `403` persiste, traiter comme blocage)",
+    );
+    expect(htmlMoi).toContain(
+      "acces.poirierlavoie.ca/demande` — aucune clé CanLII requise pour `lois` ou `outils`",
     );
     expect(htmlMoi).toContain("[RATIO / PAR. X À INSÉRER APRÈS LECTURE DE");
     expect(htmlMoi).not.toContain(CLEF_CANLII_VALIDE_TEST);
