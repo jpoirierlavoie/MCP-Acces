@@ -10,6 +10,7 @@ import geminiMd from "../GEMINI.md?raw";
 import licenseRaw from "../LICENSE?raw";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_clients_oauth_initiaux.sql?raw";
+import migration0003 from "../migrations/0003_portee_tous_et_outils.sql?raw";
 import noticeRaw from "../NOTICE?raw";
 import osvTomlRaw from "../osv-scanner.toml?raw";
 import pkgRaw from "../package.json?raw";
@@ -80,18 +81,21 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
     expect(taille).toBeGreaterThan(1_000);
     expect(taille).toBeLessThan(24_000);
     expect(geminiMd).toContain("# MCP-Acces");
-    expect(geminiMd).toContain("#v0.8.7");
+    expect(geminiMd).toContain("#v0.8.8");
+    expect(geminiMd).not.toContain("#v0.8.7");
     expect(geminiMd).not.toContain("#v0.8.6");
     expect(geminiMd).not.toContain("#v0.8.5");
     expect(geminiMd).not.toContain("#v0.8.4");
     expect(geminiMd).not.toContain("#v0.8.3");
     expect(geminiMd).not.toContain("#v0.8.2");
-    expect(securityMd).toContain("#v0.8.7");
+    expect(securityMd).toContain("#v0.8.8");
+    expect(securityMd).not.toContain("#v0.8.7");
     expect(securityMd).not.toContain("#v0.8.6");
     expect(securityMd).not.toContain("#v0.8.5");
     expect(securityMd).not.toContain("#v0.8.4");
     expect(securityMd).not.toContain("#v0.8.3");
-    expect(readmeMd).toContain("#v0.8.7");
+    expect(readmeMd).toContain("#v0.8.8");
+    expect(readmeMd).not.toContain("#v0.8.7");
     expect(readmeMd).not.toContain("#v0.8.6");
     expect(readmeMd).not.toContain("#v0.8.5");
     expect(readmeMd).not.toContain("#v0.8.4");
@@ -133,6 +137,7 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
       "osv-scanner.toml": osvTomlRaw,
       "0001_initial.sql": migration0001,
       "0002_clients_oauth_initiaux.sql": migration0002,
+      "0003_portee_tous_et_outils.sql": migration0003,
       ...SOURCES_TS,
       ...TESTS_TS,
       ...SCRIPTS_MJS,
@@ -144,13 +149,21 @@ describe("G1 & G2 — Gouvernance, parité documentaire et licence", () => {
 });
 
 describe("G13, G18 & G25 — Parité exacte des migrations D1 mcp-identite avec MCP-Socle", () => {
-  it("migrations/0001_initial.sql coïncide octet pour octet avec construireSchemaIdentiteD1(['legislation','jurisprudence'])", () => {
-    const attendu = construireSchemaIdentiteD1(SERVICES_MCP).trim();
+  it("migrations/0001_initial.sql coïncide octet pour octet avec construireSchemaIdentiteD1(['legislation','jurisprudence']) et 0003 étend à 'outils'/'tous'", () => {
+    const attendu = construireSchemaIdentiteD1(["legislation", "jurisprudence"], {
+      porteeDefaut: "les_deux",
+      inclureHeritee: false,
+    }).trim();
     expect(migration0001.trim()).toBe(attendu);
     expect(verifierSchemaSansContenuIdentifiant(migration0001)).toEqual([]);
     expect(verifierCouvertureRetentionSchema(migration0001, POLITIQUES_RETENTION_IDENTITE)).toEqual(
       [],
     );
+    const schemaApres0003 = migration0003.replace(/_nouveau\b/g, "");
+    expect(verifierSchemaSansContenuIdentifiant(schemaApres0003)).toEqual([]);
+    expect(migration0003).toContain("'tous'");
+    expect(migration0003).toContain("'outils'");
+    expect(SERVICES_MCP).toEqual(["legislation", "jurisprudence", "outils"]);
   });
 });
 
@@ -179,7 +192,7 @@ describe("G9, G10, G12 & G33 — Gardes statiques du code source", () => {
       ).not.toMatch(/\bredirect\s*:\s*["']error["']/);
     }
 
-    for (const sql of [migration0001, migration0002]) {
+    for (const sql of [migration0001, migration0002, migration0003]) {
       expect(sql).not.toMatch(/\bUPDATE\s+["`[]?registre_gouverne\b/i);
       expect(sql).not.toMatch(/\bDELETE\s+FROM\s+["`[]?registre_gouverne\b/i);
     }

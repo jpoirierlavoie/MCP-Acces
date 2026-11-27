@@ -1,12 +1,12 @@
-export const SERVICES_MCP = ["legislation", "jurisprudence"] as const;
+export const SERVICES_MCP = ["legislation", "jurisprudence", "outils"] as const;
 type ServiceMcp = (typeof SERVICES_MCP)[number];
 
 export const USAGE_COFFRE_CANLII = "canlii";
 export const VERSION_COFFRE_COURANTE = 1;
 
-export const VERSION_CGU = "2026-11-22";
+export const VERSION_CGU = "2026-11-27";
 export const VERSION_CONFIDENTIALITE = "2026-11-18";
-export const VERSION_ATTESTATION = "2026-11-18";
+export const VERSION_ATTESTATION = "2026-11-27";
 
 export const COURRIEL_CONTACT_RESPONSABLE = "jason@poirierlavoie.ca";
 export const EXPEDITEUR_PAR_DEFAUT = "noreply@acces.poirierlavoie.ca";
@@ -62,7 +62,7 @@ export const MOTIFS_GOUVERNE = [
 export type MotifGouverne = (typeof MOTIFS_GOUVERNE)[number];
 
 interface RegleDebitArete {
-  readonly worker: "MCP-Legislation" | "MCP-Jurisprudence" | "MCP-Acces";
+  readonly worker: "MCP-Legislation" | "MCP-Jurisprudence" | "MCP-Outils" | "MCP-Acces";
   readonly liaison: string;
   readonly namespaceId: string;
   readonly cle: string;
@@ -180,6 +180,51 @@ export const PLAFONDS_DEBIT_ARETE: readonly RegleDebitArete[] = [
     periodeSec: 60,
     effet: "429 sur /oauth/register, /oauth/authorize, /oauth/token et /oauth/revoke",
   },
+  {
+    worker: "MCP-Outils",
+    liaison: "RL_PRE_AUTH_IP",
+    namespaceId: "1041",
+    cle: "CF-Connecting-IP",
+    limite: 600,
+    periodeSec: 60,
+    effet: "404 (/mcp) ou 429 (/mcp/oauth) avant lecture D1",
+  },
+  {
+    worker: "MCP-Outils",
+    liaison: "RL_ECHEC_IP",
+    namespaceId: "1042",
+    cle: "CF-Connecting-IP (échecs seuls)",
+    limite: 20,
+    periodeSec: 60,
+    effet: "Quarantaine mémoire 60 s de l'IP fautive",
+  },
+  {
+    worker: "MCP-Outils",
+    liaison: "RL_ECHECS_GLOBAL",
+    namespaceId: "1043",
+    cle: '"echecs" (échecs seuls)',
+    limite: 300,
+    periodeSec: 60,
+    effet: "Disjoncteur d'incident distribué",
+  },
+  {
+    worker: "MCP-Outils",
+    liaison: "RL_TITULAIRE",
+    namespaceId: "1044",
+    cle: "titulaire_id",
+    limite: 300,
+    periodeSec: 60,
+    effet: "429 + Retry-After: 60",
+  },
+  {
+    worker: "MCP-Outils",
+    liaison: "RL_TITULAIRE_LIMITE",
+    namespaceId: "1045",
+    cle: "titulaire_id",
+    limite: 20,
+    periodeSec: 60,
+    effet: "429 + Retry-After: 300",
+  },
 ] as const;
 
 export const RESSOURCES_OAUTH_CONNUES: Readonly<Record<string, ServiceMcp>> = {
@@ -187,6 +232,8 @@ export const RESSOURCES_OAUTH_CONNUES: Readonly<Record<string, ServiceMcp>> = {
   "https://legislation.poirierlavoie.ca/mcp": "legislation",
   "https://jurisprudence.poirierlavoie.ca/mcp/oauth": "jurisprudence",
   "https://jurisprudence.poirierlavoie.ca/mcp": "jurisprudence",
+  "https://outils.poirierlavoie.ca/mcp/oauth": "outils",
+  "https://outils.poirierlavoie.ca/mcp": "outils",
 } as const;
 
 export const PREAMBULE_SAFETY_KERNEL_DEEP_RESEARCH = `CONTRAINTES IMPÉRATIVES (DROIT CIVIL QUÉBÉCOIS — PALIER 2/3) :

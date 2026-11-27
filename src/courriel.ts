@@ -70,7 +70,7 @@ export async function envoyerCourrielConfirmationDemande(
   const texte = [
     `Bonjour Me ${params.nom},`,
     "",
-    "Une demande d'accès aux connecteurs MCP Législation et Jurisprudence a été déposée avec cette adresse courriel.",
+    "Une demande d'accès aux connecteurs MCP (lois, juris et outils) a été déposée avec cette adresse courriel.",
     `Pour confirmer votre adresse courriel et soumettre votre demande à la vérification au Bottin des avocats (lien valable ${params.dureeMinutes} minutes) :`,
     params.urlConfirmation,
     "",
@@ -79,7 +79,7 @@ export async function envoyerCourrielConfirmationDemande(
 
   const paragraphesHtml = [
     `<p>Bonjour Me ${esc(params.nom)},</p>`,
-    `<p>Une demande d'accès aux connecteurs MCP Législation et Jurisprudence a été déposée avec cette adresse courriel.</p>`,
+    `<p>Une demande d'accès aux connecteurs MCP (<code>lois</code>, <code>juris</code> et <code>outils</code>) a été déposée avec cette adresse courriel.</p>`,
     `<p><a href="${esc(params.urlConfirmation)}" style="color:#7a2e1d;font-weight:700">Confirmer mon adresse courriel</a> (lien à usage unique valable ${params.dureeMinutes}&nbsp;minutes).</p>`,
     `<p style="font-size:13px;color:#666">Si vous n'êtes pas à l'origine de cette demande, ignorez simplement ce message : aucune inscription ne sera créée.</p>`,
   ];
@@ -115,7 +115,7 @@ export async function envoyerCourrielAlerteNouvelleDemande(
   ];
 
   const texte = [
-    "Une demande d'accès confirmée (adresse courriel vérifiée et clé API CanLII éprouvée en direct) est en attente de vérification manuelle au Bottin des avocats :",
+    "Une demande d'accès confirmée (adresse courriel vérifiée) est en attente de vérification manuelle au Bottin des avocats :",
     "",
     ...lignesFiche,
     "",
@@ -131,7 +131,7 @@ export async function envoyerCourrielAlerteNouvelleDemande(
   ].join("\n");
 
   const paragraphesHtml = [
-    `<p>Une demande d'accès confirmée (adresse courriel vérifiée et clé API CanLII éprouvée en direct) est en attente de vérification manuelle au <em>Bottin des avocats</em> :</p>`,
+    `<p>Une demande d'accès confirmée (adresse courriel vérifiée) est en attente de vérification manuelle au <em>Bottin des avocats</em> :</p>`,
     `<ul>\n${itemsHtml}\n</ul>`,
     `<p><a href="${esc(urlExploitant)}" style="color:#7a2e1d;font-weight:700">Ouvrir la console d'exploitation (/exploitant)</a></p>`,
   ];
@@ -226,8 +226,8 @@ export async function envoyerCourrielDecisionGouverne(
   ) {
     const sujet =
       params.motif === "admission"
-        ? "Accès approuvé — Connecteurs MCP Législation et Jurisprudence"
-        : "Compte rétabli — Connecteurs MCP Législation et Jurisprudence";
+        ? "Accès approuvé — Connecteurs MCP (lois, juris et outils)"
+        : "Compte rétabli — Connecteurs MCP (lois, juris et outils)";
     const texte = [
       `Bonjour Me ${params.nom},`,
       "",

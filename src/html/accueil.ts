@@ -112,7 +112,7 @@ ${biP(
       "et vérifications de greffe, de registres et de terminologie (outils) — plutôt que de répondre " +
       "de mémoire.",
     "Comment démarrer avec le greffon (installation par archive .zip ou place de marché) : " +
-      "1) déposez votre demande sur /demande avec votre numéro du Barreau et votre clé API CanLII ; " +
+      "1) déposez votre demande sur /demande avec votre numéro du Barreau (et facultativement votre clé API CanLII pour juris) ; " +
       "2) installez le greffon droit-civil-quebecois dans votre assistant IA ; " +
       "3) cliquez sur « Connecter » pour autoriser l'accès via votre navigateur — sans code ni clé à recopier.",
   ],
@@ -122,7 +122,7 @@ ${biP(
       "regulations (lois), CanLII case-law citation checks (juris), and exact procedural, registry, " +
       "and terminology tools (outils) — instead of guessing from memory.",
     "How to get started with the plugin (.zip archive or marketplace install): " +
-      "1) apply once on /demande using your Barreau member number and personal CanLII API key; " +
+      "1) apply once on /demande using your Barreau member number (and optionally your personal CanLII API key for juris); " +
       "2) install the droit-civil-quebecois plugin in your AI app; " +
       "3) click Connect and sign in through your browser — no config files or secret keys to copy.",
   ],
@@ -153,10 +153,11 @@ ${biP(
 ${h2("admissibilite")}
 ${biP(
   [
-    "L'accès aux connecteurs Législation (lois) et Jurisprudence (juris) est réservé gratuitement aux " +
-      "avocats inscrits actifs et en règle au Tableau de l'Ordre du Barreau du Québec. Le connecteur " +
-      "complémentaire Outils (outils — délais C.p.c., intérêts art. 1619 C.c.Q., greffes, palais, " +
-      "registres d'entreprises et terminologie) est public et utilisable sans compte.",
+    "L'accès aux trois connecteurs — Législation (lois), Jurisprudence (juris) et Outils (outils) — " +
+      "est réservé gratuitement aux avocats inscrits actifs et en règle au Tableau de l'Ordre du Barreau " +
+      "du Québec. Une clé API CanLII personnelle (gratuite) n'est requise que pour les recherches " +
+      "sortantes dans CanLII via juris : lois et outils fonctionnent sans clé CanLII (facultative à " +
+      "l'admission et modifiable à tout moment dans /moi).",
     "Le code source de l'ensemble de la suite est libre et gratuit sous licence ouverte Apache-2.0 " +
       "(accompagnée du fichier NOTICE reconnaissant les sources officielles et données ouvertes sans " +
       "revendication de propriété). Les membres admis du Barreau du Québec peuvent utiliser les " +
@@ -164,10 +165,11 @@ ${biP(
       "conformément aux /cgu et aux conditions des éditeurs officiels.",
   ],
   [
-    "Access to the Legislation (lois) and Case Law (juris) connectors is reserved free of charge for " +
-      "lawyers actively enrolled in good standing on the Roll of the Barreau du Québec. The companion " +
-      "Tools connector (outils — C.C.P. deadlines, art. 1619 C.C.Q. interest, court registries, " +
-      "courthouses, business registries, and terminology) is public and requires no account.",
+    "Access to all three connectors — Legislation (lois), Case Law (juris), and Tools (outils) — " +
+      "is reserved free of charge for lawyers actively enrolled in good standing on the Roll of the " +
+      "Barreau du Québec. A personal CanLII API key (free) is required only for live outbound CanLII " +
+      "lookups in juris: lois and outils work without any CanLII key (optional at application and " +
+      "manageable anytime in /moi).",
     "The suite's source code is published free of charge under the Apache-2.0 open-source license " +
       "(with a NOTICE file crediting official and open-data sources without claiming ownership). " +
       "Admitted Barreau du Québec members may use the hosted connectors free of charge in their " +
@@ -224,8 +226,8 @@ ${carteConnecteur({
 ${carteConnecteur({
   titreFr: "Outils (outils)",
   titreEn: "Tools (outils)",
-  badgeFr: "Public sans compte · 15 outils",
-  badgeEn: "Public, no account · 15 tools",
+  badgeFr: "Barreau du Québec · 15 outils",
+  badgeEn: "Barreau du Québec · 15 tools",
   descFr:
     "Calculateurs exacts (délais C.p.c., intérêts art. 1619 C.c.Q., taux BdC, IPC, loyer TAL), " +
     "numéros de dossier, palais de justice, registres (REQ/GLEIF), adresses civiques et terminologie bijuridique.",
@@ -259,7 +261,7 @@ ${biP(
       "ligne de commande, aux scripts automatisés et à l'API Gemini Deep Research.",
     "Adresses des connecteurs : https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
       "https://jurisprudence.poirierlavoie.ca/mcp/oauth (juris) et " +
-      "https://outils.poirierlavoie.ca/mcp (outils, sans authentification).",
+      "https://outils.poirierlavoie.ca/mcp/oauth (outils).",
   ],
   [
     "Two connection endpoints expose the same tools: browser-based OAuth 2.1 authorization " +
@@ -267,7 +269,7 @@ ${biP(
       "access (/mcp) for command-line tools, automated scripts, and Gemini API Deep Research.",
     "Connector URLs: https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
       "https://jurisprudence.poirierlavoie.ca/mcp/oauth (juris), and " +
-      "https://outils.poirierlavoie.ca/mcp (outils, unauthenticated).",
+      "https://outils.poirierlavoie.ca/mcp/oauth (outils).",
   ],
 )}
 </details>
@@ -278,31 +280,30 @@ ${biP(
 ${h2("admission")}
 ${biP(
   [
-    "1. Préparer votre propre clé API CanLII (gratuite) : chaque avocat fournit sa propre clé API " +
-      "CanLII (ou celle de son cabinet). Vous pouvez demander une clé gratuitement auprès de CanLII " +
-      "(sur canlii.org, rubrique API / formulaire de contact). La clé est vérifiée auprès de CanLII " +
-      "dès l'envoi ; le service n'utilise jamais la clé d'un tiers ni de l'exploitant à votre place.",
+    "1. Clé API CanLII personnelle (facultative — requise uniquement pour juris) : les connecteurs " +
+      "lois et outils fonctionnent sans clé CanLII. Si vous souhaitez aussi les recherches CanLII dans " +
+      "juris, vous pouvez demander une clé gratuite sur canlii.org et l'ajouter à votre demande ou plus " +
+      "tard dans /moi ; le service n'utilise jamais la clé d'un tiers ni de l'exploitant à votre place.",
     "2. Déposer votre demande sur /demande et confirmer votre courriel (30 minutes) : vous recevez " +
       "un lien à usage unique de noreply@acces.poirierlavoie.ca, valable 30 minutes. Sans confirmation, " +
       "la demande expire simplement sans bloquer votre numéro du Barreau.",
     "3. Vérification au Bottin des avocats et utilisation : votre inscription active au Tableau de " +
       "l'Ordre est vérifiée manuellement. Dès la réception du courriel d'approbation, connectez " +
-      "directement les connecteurs dans Claude, ChatGPT ou Gemini en vous authentifiant dans votre " +
-      "navigateur (l'espace /moi permet ensuite de gérer votre clé CanLII, vos préférences ou " +
+      "directement les trois connecteurs (lois, juris, outils) dans Claude, ChatGPT ou Gemini via votre " +
+      "navigateur (l'espace /moi permet ensuite d'ajouter ou gérer votre clé CanLII, vos préférences ou " +
       "d'éventuels jetons de script).",
   ],
   [
-    "1. Prepare your own CanLII API key (free): every applicant provides their own personal or firm " +
-      "CanLII REST API key. You can request a free key directly from CanLII (on canlii.org under " +
-      "API / Contact). The key is verified with CanLII upon submission; the service never falls back " +
-      "to the operator's key.",
+    "1. Personal CanLII API key (optional — required only for juris): lois and outils work without a " +
+      "CanLII key. If you also want live CanLII lookups in juris, request a free key on canlii.org and " +
+      "add it at application or later in /moi; the service never falls back to the operator's key.",
     "2. Apply on /demande and confirm your email (30 minutes): submitting sends a single-use link " +
       "from noreply@acces.poirierlavoie.ca valid for 30 minutes. Unconfirmed applications expire " +
       "automatically without locking your Barreau number.",
     "3. Bottin des avocats check and sign-in: active enrolment on the Roll of the Order is verified " +
-      "manually. As soon as your approval email arrives, simply sign in through your browser from " +
-      "Claude, ChatGPT, or Gemini (you can also visit /moi anytime to update your CanLII key, search " +
-      "preferences, or optional script tokens).",
+      "manually. As soon as your approval email arrives, connect all three connectors (lois, juris, " +
+      "outils) in Claude, ChatGPT, or Gemini through your browser (you can visit /moi anytime to add or " +
+      "update your CanLII key, search preferences, or optional script tokens).",
   ],
 )}
 </section>
@@ -342,7 +343,7 @@ ${h2("gouvernance", "h-gouvernance")}
 </tr></thead><tbody>
 <tr><td><a href="/cgu"><code>/cgu</code></a></td><td>${bi("Conditions d'utilisation : licence libre Apache-2.0, usage en cabinet, absence de garantie de disponibilité et révision sous 5 jours ouvrables", "Terms of use: Apache-2.0 open-source license, law-practice use, no uptime guarantee, and 5-business-day review procedure")}</td></tr>
 <tr><td><a href="/confidentialite"><code>/confidentialite</code></a></td><td>${bi("Politique de confidentialité (Loi 25), responsable des renseignements personnels et droits d'exportation et de suppression", "Privacy policy (Law 25), privacy officer, and data export/erasure rights")}</td></tr>
-<tr><td><a href="/attestation"><code>/attestation</code></a></td><td>${bi("Attestation d'inscription active au Barreau du Québec et de détention légitime d'une clé API CanLII", "Solemn attestation of active Barreau du Québec enrolment and legitimate CanLII API key holding")}</td></tr>
+<tr><td><a href="/attestation"><code>/attestation</code></a></td><td>${bi("Attestation d'inscription active au Barreau du Québec (et de détention légitime de toute clé API CanLII soumise)", "Solemn attestation of active Barreau du Québec enrolment (and legitimate holding of any submitted CanLII API key)")}</td></tr>
 <tr><td><a href="/conformite"><code>/conformite</code></a></td><td>${bi("Fiche technique de sécurité : sous-traitants, chiffrement de la clé CanLII et durées de conservation des données", "Technical compliance sheet: sub-processors, CanLII key encryption, and data retention schedule")}</td></tr>
 <tr><td><a href="/gouverne"><code>/gouverne</code></a></td><td>${bi("Règles de fonctionnement : plafonds quotidiens d'utilisation, protection anti-surcharge et états de compte", "Governance register: daily usage limits, overload protection, and account states")}</td></tr>
 </tbody></table></div>

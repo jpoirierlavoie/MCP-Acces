@@ -279,10 +279,11 @@ ${biP(
       "du Québec à titre d'avocat(e) en exercice actif et en règle, sans suspension ni limitation " +
       "incompatible, et je m'engage à cesser d'utiliser les connecteurs et à supprimer mon compte dans " +
       "/moi dès la cessation de mon inscription active.",
-    "2. Détention légitime d'une clé API CanLII : Je détiens légitimement la clé REST API CanLII " +
-      "soumise (à titre individuel ou avec l'autorisation expresse de mon cabinet), et je m'engage à " +
-      "respecter les conditions d'utilisation de l'API de CanLII, notamment l'interdiction de tout " +
-      "téléchargement massif automatisé.",
+    "2. Détention légitime de toute clé API CanLII soumise : Si je soumets une clé REST API CanLII " +
+      "(à la demande d'accès ou ultérieurement dans /moi), je la détiens légitimement à titre " +
+      "individuel ou avec l'autorisation expresse de mon cabinet, et je m'engage à respecter les " +
+      "conditions d'utilisation de l'API de CanLII, notamment l'interdiction de tout téléchargement " +
+      "massif automatisé.",
     "3. Confidentialité et vérification des sources : J'ai pris connaissance des conditions " +
       "d'utilisation (/cgu) et de la politique de confidentialité (/confidentialite), je n'inclurai " +
       "aucun fait identifiant un client dans une requête transmise à un outil d'IA relié à la recherche " +
@@ -294,9 +295,10 @@ ${biP(
     "1. Active enrolment in good standing: I am currently enrolled on the Roll of the Order of the " +
       "Barreau du Québec as an active practising lawyer in good standing, and I undertake to cease " +
       "using the connectors and delete my account in /moi should my active enrolment end.",
-    "2. Legitimate CanLII API key holding: I legitimately hold the submitted CanLII REST API key " +
-      "(individually or with my firm's express authorization) and agree to comply with CanLII's API " +
-      "Terms of Use, including the prohibition on automated bulk downloading.",
+    "2. Legitimate holding of any submitted CanLII API key: If I submit a CanLII REST API key " +
+      "(at application or later in /moi), I legitimately hold it individually or with my firm's " +
+      "express authorization and agree to comply with CanLII's API Terms of Use, including the " +
+      "prohibition on automated bulk downloading.",
     "3. Confidentiality & primary-source verification: I have read the Terms of Use (/cgu) and " +
       "Privacy Policy (/confidentialite), will never include client-identifying facts in queries sent " +
       "to an AI tool connected to open-web search, and will independently verify official primary " +
@@ -309,7 +311,7 @@ ${piedDocument()}`;
   return {
     titre: "Attestation solennelle — MCP Accès",
     titreEn: "Applicant Solemn Attestation — MCP Access",
-    desc: "Attestation solennelle d'inscription active en règle au Barreau du Québec et de détention légitime d'une clé API CanLII.",
+    desc: "Attestation solennelle d'inscription active en règle au Barreau du Québec et de détention légitime de toute clé API CanLII soumise.",
     corps,
   };
 }
@@ -455,7 +457,7 @@ function construireGouverne(): { titre: string; titreEn: string; desc: string; c
         "local",
         QUOTAS_ACTIF_PAR_DEFAUT.local,
         QUOTAS_LIMITE_PAR_DEFAUT.local,
-        "Outils lexicaux/structurels lois, outils juris hors réseau (parse_citation, list_exempt_cases, check_exempt_cases avec resolve_canlii=false) et lectures servies à 100 % depuis le cache D1",
+        "Outils lexicaux/structurels lois, outils pratiques (délais, intérêts, registres, terminologie), outils juris hors réseau (parse_citation, list_exempt_cases, check_exempt_cases avec resolve_canlii=false) et lectures servies à 100 % depuis le cache D1",
       ],
       [
         "sortant",

@@ -19,6 +19,8 @@ import {
   origineInterdite,
   origineRefusee,
   originesAdmises,
+  PORTEE_UNIVERSELLE,
+  PORTEE_UNIVERSELLE_HERITEE,
   porteeAutorisee,
   porteesCanoniques,
   preflight,
@@ -407,15 +409,28 @@ function verifierPorteeClientPermise(
   porteesClient: readonly string[] | "toutes",
 ): boolean {
   if (porteesClient === "toutes") return true;
-  if (porteesClient.includes("les_deux") || porteesClient.includes(porteeNormalisee)) {
+  if (
+    porteesClient.includes(PORTEE_UNIVERSELLE) ||
+    porteesClient.includes(PORTEE_UNIVERSELLE_HERITEE) ||
+    porteesClient.includes(porteeNormalisee)
+  ) {
     return true;
   }
   return false;
 }
 
 function verifierSousPorteeAutorisee(porteeDemandee: string, porteeAccordee: string): boolean {
-  if (porteeAccordee === "les_deux") return true;
-  return porteeDemandee === porteeAccordee;
+  if (porteeAccordee === PORTEE_UNIVERSELLE) return true;
+  const servicesDemandes =
+    porteeDemandee === PORTEE_UNIVERSELLE
+      ? [...SERVICES_MCP]
+      : porteeDemandee === PORTEE_UNIVERSELLE_HERITEE
+        ? ["legislation", "jurisprudence"]
+        : porteeDemandee.split(/\s+/).filter((s) => s.length > 0);
+  return (
+    servicesDemandes.length > 0 &&
+    servicesDemandes.every((service) => porteeAutorisee(porteeAccordee, service))
+  );
 }
 
 function identifiantJetonPourCodeOAuth(codeOAuthId: string): string {
@@ -620,7 +635,7 @@ export async function gererRouteAuthorize(
     if (session.titulaire.etat === "en_attente") {
       return rendreErreurLocaleAuthorize(
         403,
-        "Votre demande d'accès et votre clé API CanLII sont confirmées. Votre dossier est en attente de vérification manuelle au Bottin des avocats avant l'activation des connecteurs législation (lois) et jurisprudence (juris). Le connecteur public outils demeure utilisable immédiatement.",
+        "Votre demande d'accès est confirmée. Votre dossier est en attente de vérification manuelle au Bottin des avocats avant l'activation des connecteurs législation (lois), jurisprudence (juris) et outils (outils).",
         request.method,
       );
     }
@@ -679,11 +694,13 @@ export async function gererRouteAuthorize(
 
   const scopeFiltre = filtrerJetonsPorteeTiers(sourceParams.get("scope"));
   const porteeDefautClient =
-    client.porteesPermises !== "toutes" &&
-    !client.porteesPermises.includes("les_deux") &&
-    client.porteesPermises.length === 1
-      ? client.porteesPermises[0]
-      : undefined;
+    client.porteesPermises === "toutes" || client.porteesPermises.includes(PORTEE_UNIVERSELLE)
+      ? PORTEE_UNIVERSELLE
+      : client.porteesPermises.includes(PORTEE_UNIVERSELLE_HERITEE)
+        ? PORTEE_UNIVERSELLE_HERITEE
+        : client.porteesPermises.length === 1
+          ? client.porteesPermises[0]
+          : undefined;
 
   const portee = normaliserPorteeOAuth(
     scopeFiltre !== null && scopeFiltre.length > 0
@@ -745,17 +762,23 @@ export async function gererRouteAuthorize(
     const identifiantAffiche =
       client.source === "dcr" ? "inscription-dynamique-rfc7591" : client.clientId;
     const libellePorteeHumain =
-      portee === "les_deux"
-        ? "Législation (lois) et Jurisprudence (juris) / Legislation (lois) and Case Law (juris)"
-        : portee === "legislation"
-          ? "Législation (lois) seulement / Legislation (lois) only"
-          : "Jurisprudence (juris) seulement / Case Law (juris) only";
+      portee === PORTEE_UNIVERSELLE
+        ? "Législation (lois), Jurisprudence (juris) et Outils (outils) / Legislation (lois), Case Law (juris), and Tools (outils)"
+        : portee === PORTEE_UNIVERSELLE_HERITEE
+          ? "Législation (lois) et Jurisprudence (juris) / Legislation (lois) and Case Law (juris)"
+          : portee === "legislation"
+            ? "Législation (lois) seulement / Legislation (lois) only"
+            : portee === "jurisprudence"
+              ? "Jurisprudence (juris) seulement / Case Law (juris) only"
+              : portee === "outils"
+                ? "Outils (outils) seulement / Tools (outils) only"
+                : `Connecteurs (${portee})`;
 
     const corps = `<header><div class="bar"><h1>Autoriser l'accès à votre assistant IA</h1>${boutonsEntete(false)}</div><p class="m">Connecté en tant que <strong>Me ${esc(session.titulaire.nom)}</strong> (<code>${esc(session.titulaire.courriel)}</code>)</p></header>
 <div class="carte">
 <h2>Autoriser « ${esc(client.libelle)} » ?</h2>
 <p>En autorisant, vous permettez à <strong>${esc(client.libelle)}</strong> de consulter les connecteurs suivants avec votre compte du Barreau du Québec : <strong>${esc(libellePorteeHumain)}</strong>.</p>
-<p class="m">Votre clé API CanLII reste chiffrée sur le portail et n'est jamais transmise à l'assistant ; vos recherches ne sont jamais enregistrées.</p>
+<p class="m">Votre clé API CanLII (le cas échéant) reste chiffrée sur le portail et n'est jamais transmise à l'assistant ; vos recherches ne sont jamais enregistrées.</p>
 <details>
 <summary>Détails techniques de vérification / Technical verification details</summary>
 <ul>

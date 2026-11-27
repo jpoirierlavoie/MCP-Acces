@@ -91,7 +91,16 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(doc.code_challenge_methods_supported).toEqual(["S256"]);
     expect(doc.client_id_metadata_document_supported).toBe(true);
     expect(doc.authorization_response_iss_parameter_supported).toBe(true);
-    expect(doc.scopes_supported).toEqual(["les_deux", "jurisprudence", "legislation"]);
+    expect(doc.scopes_supported).toEqual([
+      "tous",
+      "les_deux",
+      "jurisprudence",
+      "legislation",
+      "outils",
+      "jurisprudence legislation",
+      "jurisprudence outils",
+      "legislation outils",
+    ]);
   });
 
   it("exécute le flux complet OAuth 2.1 + PKCE S256 (claude-web), bloque le rejeu de code_oauth et permet /oauth/revoke", async () => {
@@ -110,7 +119,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         response_type: "code",
         client_id: "claude-web",
         redirect_uri: redirectUri,
-        scope: "legislation jurisprudence",
+        scope: "legislation jurisprudence outils",
         code_challenge: codeChallenge,
         code_challenge_method: "S256",
         state: "etat_xyz_123",
@@ -134,7 +143,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       "form-action 'self' https://claude.ai",
     );
     const htmlConsent = await resConsent.text();
-    expect(htmlConsent).toContain("les_deux");
+    expect(htmlConsent).toContain("tous");
     const jetonConsentement = extraireJetonConsentementHtml(htmlConsent);
 
     const htmlMoi = await (
@@ -193,7 +202,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
             response_type: "code",
             client_id: "claude-web",
             redirect_uri: redirectUri,
-            scope: "les_deux",
+            scope: "tous",
             code_challenge: codeChallenge,
             code_challenge_method: "S256",
             state: "etat_xyz_123",
@@ -219,7 +228,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           response_type: "code",
           client_id: "claude-web",
           redirect_uri: redirectUri,
-          scope: "les_deux",
+          scope: "tous",
           code_challenge: codeChallenge,
           code_challenge_method: "S256",
           state: "etat_xyz_123",
@@ -288,7 +297,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           response_type: "code",
           client_id: "claude-web",
           redirect_uri: redirectUri,
-          scope: "les_deux",
+          scope: "tous",
           code_challenge: codeChallenge,
           code_challenge_method: "S256",
           state: "etat_xyz_123",
@@ -329,7 +338,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       scope: string;
     };
     expect(corpsToken.token_type).toBe("Bearer");
-    expect(corpsToken.scope).toBe("les_deux");
+    expect(corpsToken.scope).toBe("tous");
     expect(corpsToken.access_token).toHaveLength(43);
 
     const depot = creerDepotJetonsD1(db);
@@ -340,6 +349,26 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(
       (await resoudreJeton(depot, [corpsToken.access_token], { service: "jurisprudence" }))
         ?.titulaireId,
+    ).toBe("tit_oauth_claude");
+    expect(
+      (await resoudreJeton(depot, [corpsToken.access_token], { service: "outils" }))?.titulaireId,
+    ).toBe("tit_oauth_claude");
+
+    // Rétrocompatibilité 'les_deux' : accepté comme équivalent à 'tous' à la résolution
+    const hashCompat = await empreinte("jeton_compat_les_deux_2026_1234567890abcdef");
+    await db
+      .prepare(
+        `INSERT INTO jeton (id, titulaire_id, empreinte, queue, libelle, portee, emis_le)
+         VALUES ('jtn_compat_ld', 'tit_oauth_claude', ?1, 'abcdef', 'Ancien jeton', 'les_deux', '2026-11-18T00:00:00.000Z')`,
+      )
+      .bind(hashCompat)
+      .run();
+    expect(
+      (
+        await resoudreJeton(depot, ["jeton_compat_les_deux_2026_1234567890abcdef"], {
+          service: "outils",
+        })
+      )?.titulaireId,
     ).toBe("tit_oauth_claude");
 
     const resRejeuCode = await app.fetch(
@@ -1243,12 +1272,15 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resTokenDcr.status).toBe(200);
     const jsonTokenDcr = (await resTokenDcr.json()) as { access_token: string; scope: string };
-    expect(jsonTokenDcr.scope).toBe("les_deux");
+    expect(jsonTokenDcr.scope).toBe("tous");
 
     const depot = creerDepotJetonsD1(db);
     expect(
       (await resoudreJeton(depot, [jsonTokenDcr.access_token], { service: "legislation" }))
         ?.titulaireId,
+    ).toBe("tit_oauth_dcr");
+    expect(
+      (await resoudreJeton(depot, [jsonTokenDcr.access_token], { service: "outils" }))?.titulaireId,
     ).toBe("tit_oauth_dcr");
 
     const jetonLigne = await db
@@ -1369,6 +1401,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const htmlAttente = await resAttente.text();
     expect(htmlAttente).toContain("Bottin des avocats");
     expect(htmlAttente).toContain("outils");
+    expect(htmlAttente).not.toContain("demeure utilisable immédiatement");
   });
 
   it("prend en charge ChatGPT OAuth 2.1 (CIMD SEP-3149, RFC 9207 iss, filtrage offline_access/OIDC, CORS et DCR grant_types)", async () => {
