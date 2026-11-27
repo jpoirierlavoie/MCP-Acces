@@ -160,19 +160,19 @@ ${optionsSections}
 <input id="cabinet" name="cabinet" type="text" autocomplete="organization" maxlength="160" value="${esc(params.valeurs?.cabinet ?? "")}">
 </div>
 <div class="champ">
-<label for="clef_canlii">${bi("Clé API CanLII personnelle ou de cabinet (obligatoire — votre propre clé)", "Personal or firm CanLII API key (mandatory — your own key)")}</label>
-<p id="aide-canlii" class="m"><span data-l="fr">Vous pouvez demander gratuitement une clé API sur <a href="https://www.canlii.org/fr/info/api.html" rel="noopener">canlii.org</a> si vous n'en avez pas encore. Votre clé est vérifiée auprès de CanLII lors de l'envoi, puis conservée sous forme chiffrée et jamais journalisée en clair (détails sur <code>/conformite</code>).</span><span data-l="en" lang="en">You can request a free API key at <a href="https://www.canlii.org/en/info/api.html" rel="noopener">canlii.org</a> if you do not have one yet. Your key is verified with CanLII upon submission, then stored encrypted and never logged in plaintext (details on <code>/conformite</code>).</span></p>
-<input id="clef_canlii" name="clef_canlii" type="password" required autocomplete="off" aria-describedby="aide-canlii" maxlength="256">
+<label for="clef_canlii">${bi("Clé API CanLII personnelle ou de cabinet (facultative — requise uniquement pour juris)", "Personal or firm CanLII API key (optional — required only for juris)")}</label>
+<p id="aide-canlii" class="m"><span data-l="fr">Facultative pour demander l'accès à <code>lois</code> et <code>outils</code>. Vous pouvez laisser ce champ vide maintenant et ajouter ou remplacer votre clé plus tard dans <code>/moi</code> (clé gratuite disponible sur <a href="https://www.canlii.org/fr/info/api.html" rel="noopener">canlii.org</a>). Si vous en saisissez une, elle est vérifiée auprès de CanLII lors de l'envoi, puis chiffrée sans journalisation (<code>/conformite</code>).</span><span data-l="en" lang="en">Optional to apply for <code>lois</code> and <code>outils</code>. Leave blank for now and add or update a key anytime in <code>/moi</code> (free key available at <a href="https://www.canlii.org/en/info/api.html" rel="noopener">canlii.org</a>). If provided, your key is verified with CanLII upon submission and stored encrypted with zero logging (<code>/conformite</code>).</span></p>
+<input id="clef_canlii" name="clef_canlii" type="password" autocomplete="off" aria-describedby="aide-canlii" maxlength="256">
 </div>
 <div class="case">
 <input id="attestation_acceptee" name="attestation_acceptee" type="checkbox" value="oui" required>
-<label for="attestation_acceptee"><span data-l="fr">Je souscris à l'<a href="/attestation">attestation solennelle</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}) : je suis inscrit(e) actif(ve) en règle au Barreau du Québec et je détiens légitimement cette clé API CanLII.</span><span data-l="en" lang="en">I subscribe to the <a href="/attestation">solemn attestation</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}): I am an active member in good standing of the Barreau du Québec and legitimately hold this CanLII API key.</span></label>
+<label for="attestation_acceptee"><span data-l="fr">Je souscris à l'<a href="/attestation">attestation solennelle</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}) : je suis inscrit(e) actif(ve) en règle au Barreau du Québec et, le cas échéant, je détiens légitimement toute clé API CanLII soumise.</span><span data-l="en" lang="en">I subscribe to the <a href="/attestation">solemn attestation</a> (v.&nbsp;${esc(VERSION_ATTESTATION)}): I am an active member in good standing of the Barreau du Québec and legitimately hold any submitted CanLII API key.</span></label>
 </div>
 <div class="case">
 <input id="cgu_acceptees" name="cgu_acceptees" type="checkbox" value="oui" required>
 <label for="cgu_acceptees"><span data-l="fr">J'accepte les <a href="/cgu">conditions générales d'utilisation</a> (v.&nbsp;${esc(VERSION_CGU)}) et j'ai pris connaissance de la <a href="/confidentialite">politique de confidentialité</a>.</span><span data-l="en" lang="en">I accept the <a href="/cgu">terms of use</a> (v.&nbsp;${esc(VERSION_CGU)}) and have read the <a href="/confidentialite">privacy policy</a>.</span></label>
 </div>
-<p><button type="submit" class="btn">${bi("Vérifier ma clé CanLII et recevoir mon lien de confirmation", "Verify my CanLII key & send confirmation link")}</button></p>
+<p><button type="submit" class="btn">${bi("Déposer ma demande et recevoir mon lien de confirmation", "Submit application & send confirmation link")}</button></p>
 </form>`;
   }
 
@@ -190,7 +190,7 @@ ${contenuPrincipal}`;
     titrePage: "Demande d'accès — MCP Accès (Barreau du Québec)",
     titrePageEn: "Access Application — MCP Access (Barreau du Québec)",
     descriptionMeta:
-      "Formulaire de demande d'accès réservé aux membres actifs en règle du Barreau du Québec (clé API CanLII requise).",
+      "Formulaire de demande d'accès réservé aux membres actifs en règle du Barreau du Québec (clé API CanLII facultative pour lois et outils).",
     corpsHtml: corps,
     bilingue: true,
     noindex: true,
@@ -276,7 +276,9 @@ export async function gererRouteDemande(
   const section = validerSectionBarreau(sectionBrute);
   const courriel = normaliserCourriel(courrielBrut);
   const cabinet = cabinetBrut.trim().length > 0 ? nettoyerLigneTexte(cabinetBrut, 1, 160) : null;
-  const clefCanlii = normaliserValiderFormatCanlii(champs.get("clef_canlii"));
+  const clefCanliiBrute = (champs.get("clef_canlii") ?? "").trim();
+  const clefCanlii =
+    clefCanliiBrute.length > 0 ? normaliserValiderFormatCanlii(clefCanliiBrute) : null;
   const attestationOk = champs.get("attestation_acceptee") === "oui";
   const cguOk = champs.get("cgu_acceptees") === "oui";
 
@@ -321,7 +323,7 @@ export async function gererRouteDemande(
       valeurs: valeursSaisies,
     });
   }
-  if (!clefCanlii) {
+  if (clefCanliiBrute.length > 0 && !clefCanlii) {
     return rendrePageFormulaireDemande({
       mode,
       statut: 400,
@@ -384,17 +386,19 @@ export async function gererRouteDemande(
     invitationId = inv.id;
   }
 
-  const epreuve = await eprouverClefCanliiEnDirect(clefCanlii, {
-    baseUrl: contexte.env.CANLII_BASE_URL,
-    fetchImpl: contexte.fetchExterne,
-  });
-  if (!epreuve.ok) {
-    return rendrePageFormulaireDemande({
-      mode,
-      statut: 400,
-      erreur: epreuve.messagePublic,
-      valeurs: valeursSaisies,
+  if (clefCanlii !== null) {
+    const epreuve = await eprouverClefCanliiEnDirect(clefCanlii, {
+      baseUrl: contexte.env.CANLII_BASE_URL,
+      fetchImpl: contexte.fetchExterne,
     });
+    if (!epreuve.ok) {
+      return rendrePageFormulaireDemande({
+        mode,
+        statut: 400,
+        erreur: epreuve.messagePublic,
+        valeurs: valeursSaisies,
+      });
+    }
   }
 
   const existant = await contexte.env.DB_IDENTITE.prepare(
@@ -428,13 +432,16 @@ export async function gererRouteDemande(
     new Date(maintenantMs + DUREE_DEMANDE_ACCES_MINUTES * 60_000),
   );
 
-  const scelle = await scellerClefCanliiPourTitulaire(contexte.env, demandeId, clefCanlii);
-  if (!scelle) {
-    return rendrePageFormulaireDemande({
-      mode,
-      statut: 503,
-      erreur: "Configuration du coffre indisponible.",
-    });
+  let scelle: Awaited<ReturnType<typeof scellerClefCanliiPourTitulaire>> = null;
+  if (clefCanlii !== null) {
+    scelle = await scellerClefCanliiPourTitulaire(contexte.env, demandeId, clefCanlii);
+    if (!scelle) {
+      return rendrePageFormulaireDemande({
+        mode,
+        statut: 503,
+        erreur: "Configuration du coffre indisponible.",
+      });
+    }
   }
 
   await contexte.env.DB_IDENTITE.prepare(
@@ -462,11 +469,11 @@ export async function gererRouteDemande(
       maintenantIso,
       VERSION_ATTESTATION,
       VERSION_CGU,
-      scelle.version,
-      scelle.iv,
-      scelle.chiffre,
-      scelle.repere,
-      scelle.empreinteClef,
+      scelle?.version ?? null,
+      scelle?.iv ?? null,
+      scelle?.chiffre ?? null,
+      scelle?.repere ?? null,
+      scelle?.empreinteClef ?? null,
       maintenantIso,
       expireLeIso,
     )
@@ -498,9 +505,9 @@ function rendrePageConfirmationDemande(params: {
   let bloc: string;
   if (params.succes) {
     bloc = `<div class="ok">
-<h2>Adresse courriel confirmée et clé CanLII enregistrée</h2>
+<h2>Adresse courriel confirmée</h2>
 <p>Votre demande est maintenant enregistrée en file d'admission (statut <code>en_attente</code>).</p>
-<p>Votre inscription active au <em>Bottin des avocats</em> du Barreau du Québec va être vérifiée manuellement. Dès la réception du courriel d'approbation, vous pourrez vous connecter directement depuis votre assistant IA (Claude, ChatGPT, Gemini ou Antigravity) dans votre navigateur — ou consulter <a href="/moi"><code>/moi</code></a> pour gérer votre compte.</p>
+<p>Votre inscription active au <em>Bottin des avocats</em> du Barreau du Québec va être vérifiée manuellement. Dès la réception du courriel d'approbation, vous pourrez vous connecter aux trois connecteurs (<code>lois</code>, <code>juris</code>, <code>outils</code>) dans votre navigateur — ou consulter <a href="/moi"><code>/moi</code></a> pour gérer votre compte et ajouter ou modifier votre clé API CanLII.</p>
 </div>`;
   } else if (params.jetonValide) {
     bloc = `${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
@@ -624,16 +631,22 @@ export async function gererRouteConfirmationDemande(
     .first<LigneDemandeAccesD1>();
 
   const expMs = demande ? horodatageUtcMs(demande.expire_le) : null;
+  const champsCoffrePresents = [
+    demande?.coffre_version !== null,
+    demande?.coffre_iv !== null,
+    demande?.coffre_chiffre !== null,
+    demande?.coffre_repere !== null,
+    demande?.coffre_empreinte !== null,
+  ];
+  const aCoffre = champsCoffrePresents.every(Boolean);
+  const coffrePartiel = !aCoffre && champsCoffrePresents.some(Boolean);
+
   if (
     !demande ||
     demande.consomme_le !== null ||
     expMs === null ||
     expMs <= maintenantMs ||
-    demande.coffre_version === null ||
-    demande.coffre_iv === null ||
-    demande.coffre_chiffre === null ||
-    demande.coffre_repere === null ||
-    demande.coffre_empreinte === null
+    coffrePartiel
   ) {
     return rendrePageConfirmationDemande({ statut: 400 });
   }
@@ -662,38 +675,40 @@ export async function gererRouteConfirmationDemande(
     }
   }
 
-  const epreuve = await eprouverEntreeScelleeCanlii(
-    demande.id,
-    {
-      titulaireId: demande.id,
-      version: demande.coffre_version,
-      iv: demande.coffre_iv,
-      chiffre: demande.coffre_chiffre,
-      repere: demande.coffre_repere,
-      empreinteClef: demande.coffre_empreinte,
-      etat: "valide",
-    },
-    maitres,
-    {
-      baseUrl: contexte.env.CANLII_BASE_URL,
-      fetchImpl: contexte.fetchExterne,
-    },
-  );
+  if (aCoffre) {
+    const epreuve = await eprouverEntreeScelleeCanlii(
+      demande.id,
+      {
+        titulaireId: demande.id,
+        version: demande.coffre_version!,
+        iv: demande.coffre_iv!,
+        chiffre: demande.coffre_chiffre!,
+        repere: demande.coffre_repere!,
+        empreinteClef: demande.coffre_empreinte!,
+        etat: "valide",
+      },
+      maitres,
+      {
+        baseUrl: contexte.env.CANLII_BASE_URL,
+        fetchImpl: contexte.fetchExterne,
+      },
+    );
 
-  if (!epreuve.ok) {
-    if (epreuve.categorie === "indisponible") {
+    if (!epreuve.ok) {
+      if (epreuve.categorie === "indisponible") {
+        return rendrePageConfirmationDemande({
+          statut: 503,
+          jetonValide: jeton,
+          nomDemandeur: demande.nom,
+          courrielDemandeur: demande.courriel,
+          erreur: epreuve.messagePublic,
+        });
+      }
       return rendrePageConfirmationDemande({
-        statut: 503,
-        jetonValide: jeton,
-        nomDemandeur: demande.nom,
-        courrielDemandeur: demande.courriel,
+        statut: 400,
         erreur: epreuve.messagePublic,
       });
     }
-    return rendrePageConfirmationDemande({
-      statut: 400,
-      erreur: epreuve.messagePublic,
-    });
   }
 
   const conso = await contexte.env.DB_IDENTITE.prepare(
@@ -728,23 +743,30 @@ export async function gererRouteConfirmationDemande(
         demande.attestation_ver,
         demande.cgu_ver,
       ),
-      contexte.env.DB_IDENTITE.prepare(
-        `INSERT INTO coffre_clef (
-          titulaire_id, usage, version, iv, chiffre, repere, empreinte_clef, pose_le, eprouve_le, etat
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, 'valide')`,
-      ).bind(
-        demande.id,
-        USAGE_COFFRE_CANLII,
-        demande.coffre_version,
-        demande.coffre_iv,
-        demande.coffre_chiffre,
-        demande.coffre_repere,
-        demande.coffre_empreinte,
-        maintenantIso,
-      ),
     ];
 
+    if (aCoffre) {
+      instructions.push(
+        contexte.env.DB_IDENTITE.prepare(
+          `INSERT INTO coffre_clef (
+            titulaire_id, usage, version, iv, chiffre, repere, empreinte_clef, pose_le, eprouve_le, etat
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8, 'valide')`,
+        ).bind(
+          demande.id,
+          USAGE_COFFRE_CANLII,
+          demande.coffre_version,
+          demande.coffre_iv,
+          demande.coffre_chiffre,
+          demande.coffre_repere,
+          demande.coffre_empreinte,
+          maintenantIso,
+        ),
+      );
+    }
+
+    let indexInvitation = -1;
     if (demande.invitation_id !== null) {
+      indexInvitation = instructions.length;
       instructions.push(
         contexte.env.DB_IDENTITE.prepare(
           `UPDATE invitation_acces
@@ -755,13 +777,19 @@ export async function gererRouteConfirmationDemande(
     }
 
     const resultats = await contexte.env.DB_IDENTITE.batch(instructions);
-    if (demande.invitation_id !== null && (resultats[2]?.meta?.changes ?? 0) !== 1) {
-      await contexte.env.DB_IDENTITE.batch([
-        contexte.env.DB_IDENTITE.prepare(`DELETE FROM coffre_clef WHERE titulaire_id = ?1`).bind(
-          demande.id,
-        ),
+    if (demande.invitation_id !== null && (resultats[indexInvitation]?.meta?.changes ?? 0) !== 1) {
+      const nettoyages: D1PreparedStatement[] = [];
+      if (aCoffre) {
+        nettoyages.push(
+          contexte.env.DB_IDENTITE.prepare(`DELETE FROM coffre_clef WHERE titulaire_id = ?1`).bind(
+            demande.id,
+          ),
+        );
+      }
+      nettoyages.push(
         contexte.env.DB_IDENTITE.prepare(`DELETE FROM titulaire WHERE id = ?1`).bind(demande.id),
-      ]);
+      );
+      await contexte.env.DB_IDENTITE.batch(nettoyages);
       return rendrePageConfirmationDemande({
         statut: 400,
         erreur: "Ce code d'invitation vient d'être consommé ou d'expirer.",

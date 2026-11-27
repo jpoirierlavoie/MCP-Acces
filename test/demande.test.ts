@@ -357,6 +357,53 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(ouvert).toEqual({ ok: true, client: true, provenance: "coffre" });
 
+    // Demande sans clé API CanLII : autorisée et confirmée sans entrée coffre_clef
+    const resSansClef = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Origin: "https://acces.poirierlavoie.ca",
+        },
+        body: construireCorpsDemande({
+          nom: "Jean SansClef",
+          numero_membre: "202011-4",
+          courriel: "jsansclef@cabinet-exemple.ca",
+          clef_canlii: "",
+        }),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resSansClef.status).toBe(200);
+    const lienSansClef =
+      /https:\/\/acces\.poirierlavoie\.ca\/demande\/confirmer\?jeton=([A-Za-z0-9_-]+)/.exec(
+        boite.dernier().text,
+      );
+    expect(lienSansClef?.[1]).toBeDefined();
+    const resConfSansClef = await app.fetch(
+      new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Origin: "https://acces.poirierlavoie.ca",
+        },
+        body: new URLSearchParams({ jeton: lienSansClef![1]! }).toString(),
+      }),
+      envTest,
+      creerExecutionContextTest(),
+    );
+    expect(resConfSansClef.status).toBe(200);
+    const titSansClef = await db
+      .prepare("SELECT id, etat FROM titulaire WHERE numero_membre = '2020114'")
+      .first<{ id: string; etat: string }>();
+    expect(titSansClef?.etat).toBe("en_attente");
+    const coffreSansClef = await db
+      .prepare("SELECT COUNT(*) AS n FROM coffre_clef WHERE titulaire_id = ?1")
+      .bind(titSansClef!.id)
+      .first<{ n: number }>();
+    expect(coffreSansClef?.n).toBe(0);
+
     const resDoublon = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",

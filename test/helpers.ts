@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import type { Limiteur } from "@poirierlavoie/mcp-socle";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_clients_oauth_initiaux.sql?raw";
+import migration0003 from "../migrations/0003_portee_tous_et_outils.sql?raw";
 import type { Env } from "../src/types";
 
 interface CourrielCapture {
@@ -72,6 +73,7 @@ export async function reinitialiserBaseIdentite(): Promise<D1Database> {
     db.prepare("PRAGMA foreign_keys = ON"),
     ...decouperInstructionsSql(migration0001).map((s) => db.prepare(s)),
     ...decouperInstructionsSql(migration0002).map((s) => db.prepare(s)),
+    ...decouperInstructionsSql(migration0003).map((s) => db.prepare(s)),
   ];
   await db.batch(stmts);
   return db;

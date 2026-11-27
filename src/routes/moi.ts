@@ -13,7 +13,7 @@ import {
   horodatageUtcMs,
   jourUtc,
   lireCompteursJourD1,
-  normaliserPorteeOAuth,
+  PORTEE_UNIVERSELLE,
   plafondsPourEtat,
   queueJeton,
   retirerEntreeCoffreD1,
@@ -24,7 +24,6 @@ import { eprouverClefCanliiEnDirect, eprouverEntreeScelleeCanlii } from "../canl
 import {
   ID_TITULAIRE_EVALUATION,
   PREAMBULE_SAFETY_KERNEL_DEEP_RESEARCH,
-  SERVICES_MCP,
   USAGE_COFFRE_CANLII,
 } from "../constantes";
 import { envoyerCourrielLienMagiqueMoi } from "../courriel";
@@ -178,6 +177,7 @@ export async function resoudreSessionMoiActive(
 function construireExtraitsClientsHtml(originePortail: string): string {
   const varLois = `Bearer \${MCP_LEGISLATION_SECRET}`;
   const varJuris = `Bearer \${MCP_JURISPRUDENCE_SECRET}`;
+  const varOutils = `Bearer \${MCP_OUTILS_SECRET}`;
 
   const mcpJson = JSON.stringify(
     {
@@ -192,7 +192,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
         },
         outils: {
           type: "http",
-          url: "https://outils.poirierlavoie.ca/mcp",
+          url: "https://outils.poirierlavoie.ca/mcp/oauth",
         },
       },
     },
@@ -210,7 +210,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
           url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
-          url: "https://outils.poirierlavoie.ca/mcp",
+          url: "https://outils.poirierlavoie.ca/mcp/oauth",
         },
       },
     },
@@ -221,7 +221,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
   const geminiExtensionJson = JSON.stringify(
     {
       name: "droit-civil-quebecois",
-      version: "3.3.1",
+      version: "3.4.0",
       description:
         "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
       contextFileName: [],
@@ -237,7 +237,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
         },
         outils: {
           type: "http",
-          url: "https://outils.poirierlavoie.ca/mcp",
+          url: "https://outils.poirierlavoie.ca/mcp/oauth",
         },
       },
     },
@@ -261,6 +261,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
         outils: {
           type: "http",
           url: "https://outils.poirierlavoie.ca/mcp",
+          headers: { Authorization: varOutils },
         },
       },
     },
@@ -292,6 +293,7 @@ interaction = client.interactions.create(
             "type": "mcp_server",
             "name": "outils",
             "url": "https://outils.poirierlavoie.ca/mcp",
+            "headers": {"Authorization": f"Bearer {MCP_JETON}"},
         },
     ],
     input="""${PREAMBULE_SAFETY_KERNEL_DEEP_RESEARCH}""",
@@ -303,10 +305,10 @@ interaction = client.interactions.create(
 
 <details>
 <summary>ChatGPT (Web et ordinateur — archive <code>.zip</code> + 3 connecteurs)</summary>
-<p class="m">1) Importez l'archive <code>droit-civil-quebecois-chatgpt-universal.zip</code> (depuis GitHub Releases) ; 2) Dans ChatGPT (<strong>+ → Add custom MCP server</strong>), ajoutez une seule fois ces trois adresses (<code>OAuth</code> pour les deux premières, <code>No authentication</code> pour <code>outils</code>) :</p>
+<p class="m">1) Importez l'archive <code>droit-civil-quebecois-chatgpt-universal.zip</code> (depuis GitHub Releases) ; 2) Dans ChatGPT (<strong>+ → Add custom MCP server</strong>), ajoutez une seule fois ces trois adresses (<code>OAuth</code> pour les trois connecteurs) :</p>
 <pre><code>lois   : https://legislation.poirierlavoie.ca/mcp/oauth
 juris  : https://jurisprudence.poirierlavoie.ca/mcp/oauth
-outils : https://outils.poirierlavoie.ca/mcp</code></pre>
+outils : https://outils.poirierlavoie.ca/mcp/oauth</code></pre>
 </details>
 
 <details>
@@ -329,10 +331,11 @@ outils : https://outils.poirierlavoie.ca/mcp</code></pre>
 <p><strong>Mode recommandé (connexion par navigateur via <code>${esc(originePortail)}</code>) :</strong></p>
 <pre><code>https://legislation.poirierlavoie.ca/mcp/oauth
 https://jurisprudence.poirierlavoie.ca/mcp/oauth
-https://outils.poirierlavoie.ca/mcp</code></pre>
+https://outils.poirierlavoie.ca/mcp/oauth</code></pre>
 <p><strong>Variante à jeton direct (poser l'URL complète dès la création du connecteur) :</strong></p>
 <pre><code>https://legislation.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;
-https://jurisprudence.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;</code></pre>
+https://jurisprudence.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;
+https://outils.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;</code></pre>
 </details>
 
 <details>
@@ -340,6 +343,7 @@ https://jurisprudence.poirierlavoie.ca/mcp?key=&lt;VOTRE_JETON&gt;</code></pre>
 <p>Ces environnements utilisent OAuth 2.1 + PKCE <code>S256</code> (RFC 9728 / RFC 8414) :</p>
 <pre><code>Ressource Législation   : https://legislation.poirierlavoie.ca/mcp/oauth
 Ressource Jurisprudence : https://jurisprudence.poirierlavoie.ca/mcp/oauth
+Ressource Outils        : https://outils.poirierlavoie.ca/mcp/oauth
 Serveur d'autorisation  : ${esc(originePortail)}/.well-known/oauth-authorization-server</code></pre>
 </details>
 
@@ -351,7 +355,7 @@ Serveur d'autorisation  : ${esc(originePortail)}/.well-known/oauth-authorization
 
 <details>
 <summary>7. Mode sans navigateur / CLI / CI (jeton <code>Bearer</code> direct sur <code>/mcp</code>)</summary>
-<p class="m">Pour les scripts automatisés sans flux OAuth interactif. Un jeton de portée <code>les_deux</code> peut alimenter à la fois <code>MCP_LEGISLATION_SECRET</code> et <code>MCP_JURISPRUDENCE_SECRET</code> ; l'en-tête optionnel <code>X-Clef-CanLII</code> peut également être transmis à <code>juris</code> sur <code>/mcp</code>.</p>
+<p class="m">Pour les scripts automatisés sans flux OAuth interactif. Un seul jeton universel de portée <code>tous</code> alimente à la fois <code>MCP_LEGISLATION_SECRET</code>, <code>MCP_JURISPRUDENCE_SECRET</code> et <code>MCP_OUTILS_SECRET</code> ; l'en-tête optionnel <code>X-Clef-CanLII</code> peut également être transmis à <code>juris</code> sur <code>/mcp</code>.</p>
 <pre><code>${esc(mcpBearerJson)}</code></pre>
 </details>
 </section>`;
@@ -383,7 +387,7 @@ function rendrePageConnexionMoi(params: {
     const banniereOAuth = retourPropre?.startsWith("/oauth/authorize")
       ? `<div class="avert">
 <p><strong>Connexion d'un connecteur OAuth 2.1 en cours :</strong> saisissez l'adresse courriel professionnelle rattachée à votre compte admis pour recevoir votre lien de connexion par courriel et autoriser l'assistant IA automatiquement.</p>
-<p class="m"><strong>Première visite ?</strong> Les membres actifs du Barreau du Québec doivent d'abord <a href="/demande">déposer une demande d'accès (<code>/demande</code>)</a> avec leur clé API CanLII personnelle avant de pouvoir autoriser <code>lois</code> et <code>juris</code>.</p>
+<p class="m"><strong>Première visite ?</strong> Les membres actifs du Barreau du Québec doivent d'abord <a href="/demande">déposer une demande d'accès (<code>/demande</code>)</a> avant de pouvoir autoriser <code>lois</code>, <code>juris</code> et <code>outils</code> (clé API CanLII facultative, requise uniquement pour <code>juris</code>).</p>
 </div>`
       : "";
     contenu = `${banniereOAuth}${params.erreur ? `<div class="err"><p>${esc(params.erreur)}</p></div>` : ""}
@@ -545,8 +549,8 @@ ${
     : estServi
       ? `<div class="avert">
 <h2>Utilisateurs de Claude, ChatGPT ou Gemini : aucun jeton à créer ici</h2>
-<p>Si vous avez installé le greffon (via la place de marché ou une archive <code>.zip</code>), connectez simplement <code>lois</code> et <code>juris</code> dans votre assistant IA et ouvrez votre session dans votre navigateur : vous n'avez <strong>pas</strong> besoin de créer un jeton manuel ni de copier de code ci-dessous.</p>
-<p class="m">Sur <code>claude.ai</code> ou ChatGPT (Web / ordinateur : <strong>+ → Add custom MCP server</strong>), ajoutez simplement <code>https://legislation.poirierlavoie.ca/mcp/oauth</code> (OAuth), <code>https://jurisprudence.poirierlavoie.ca/mcp/oauth</code> (OAuth) et <code>https://outils.poirierlavoie.ca/mcp</code> (sans authentification).</p>
+<p>Si vous avez installé le greffon (via la place de marché ou une archive <code>.zip</code>), connectez simplement <code>lois</code>, <code>juris</code> et <code>outils</code> dans votre assistant IA et ouvrez votre session dans votre navigateur : vous n'avez <strong>pas</strong> besoin de créer un jeton manuel ni de copier de code ci-dessous.</p>
+<p class="m">Sur <code>claude.ai</code> ou ChatGPT (Web / ordinateur : <strong>+ → Add custom MCP server</strong>), ajoutez simplement <code>https://legislation.poirierlavoie.ca/mcp/oauth</code> (OAuth), <code>https://jurisprudence.poirierlavoie.ca/mcp/oauth</code> (OAuth) et <code>https://outils.poirierlavoie.ca/mcp/oauth</code> (OAuth).</p>
 </div>`
       : ""
 }
@@ -559,7 +563,7 @@ ${banniereJetonUnique}
 <th class="n">Utilisé aujourd'hui</th>
 <th class="n">Plafond quotidien</th>
 </tr></thead><tbody>
-<tr><td>Recherches de lois et vérifications locales (<code>local</code>)</td><td class="n">${compteurs.local}</td><td class="n">${plafonds.local}</td></tr>
+<tr><td>Appels locaux — <code>lois</code>, <code>outils</code> et cache <code>juris</code> (<code>local</code>)</td><td class="n">${compteurs.local}</td><td class="n">${plafonds.local}</td></tr>
 <tr><td>Appels vers CanLII (<code>sortant</code>)</td><td class="n">${compteurs.sortant}</td><td class="n">${plafonds.sortant}</td></tr>
 <tr><td>Recherches par sens assistées par IA (<code>semantique</code>)</td><td class="n">${compteurs.semantique}</td><td class="n">${plafonds.semantique}</td></tr>
 </tbody></table></div>
@@ -644,14 +648,7 @@ ${
 <label for="libelle_jeton">Nom du poste ou du script</label>
 <input id="libelle_jeton" name="libelle" type="text" required maxlength="80" placeholder="Poste bureau — script ou CLI">
 </div>
-<div class="champ">
-<label for="portee_jeton">Accès autorisé</label>
-<select id="portee_jeton" name="portee">
-<option value="les_deux">les_deux — Législation et Jurisprudence (recommandé)</option>
-<option value="legislation">legislation — Législation seulement</option>
-<option value="jurisprudence">jurisprudence — Jurisprudence seulement</option>
-</select>
-</div>
+<p class="m"><strong>Accès autorisé :</strong> tous les connecteurs (<code>lois</code>, <code>juris</code> et <code>outils</code> — portée <code>${esc(PORTEE_UNIVERSELLE)}</code> ; les recherches sortantes CanLII dans <code>juris</code> demeurent subordonnées à votre clé API CanLII).</p>
 <div class="champ">
 <label for="expiration_jeton">Durée de validité</label>
 <select id="expiration_jeton" name="jours_expiration">
@@ -979,13 +976,13 @@ export async function gererRouteMoi(
       });
     }
     const libelle = nettoyerLigneTexte(champs.get("libelle"), 1, 80);
-    const portee = normaliserPorteeOAuth(champs.get("portee"), SERVICES_MCP);
+    const portee = PORTEE_UNIVERSELLE;
     const joursBrut = champs.get("jours_expiration") ?? "90";
 
-    if (!libelle || !portee) {
+    if (!libelle) {
       return await rendreTableauDeBordMoi(session, contexte, {
         statut: 400,
-        messageErreur: "Veuillez préciser un libellé valide et une portée reconnue.",
+        messageErreur: "Veuillez préciser un libellé valide pour le jeton.",
       });
     }
 

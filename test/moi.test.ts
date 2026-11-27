@@ -266,7 +266,13 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(
       (await resoudreJeton(depot, [jetonClair], { service: "legislation" }))?.titulaireId,
     ).toBe("tit_moi_1");
-    expect(await resoudreJeton(depot, [jetonClair], { service: "jurisprudence" })).toBeNull();
+    expect(
+      (await resoudreJeton(depot, [jetonClair], { service: "jurisprudence" }))?.titulaireId,
+    ).toBe("tit_moi_1");
+    expect((await resoudreJeton(depot, [jetonClair], { service: "outils" }))?.titulaireId).toBe(
+      "tit_moi_1",
+    );
+    expect((await resoudreJeton(depot, [jetonClair], { service: "outils" }))?.portee).toBe("tous");
 
     const resHybride = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
@@ -671,7 +677,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
         },
         outils: {
           type: "http",
-          url: "https://outils.poirierlavoie.ca/mcp",
+          url: "https://outils.poirierlavoie.ca/mcp/oauth",
         },
       },
     });
@@ -688,7 +694,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
           url: "https://jurisprudence.poirierlavoie.ca/mcp/oauth",
         },
         outils: {
-          url: "https://outils.poirierlavoie.ca/mcp",
+          url: "https://outils.poirierlavoie.ca/mcp/oauth",
         },
       },
     });
@@ -702,7 +708,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       mcpServers: Record<string, Record<string, unknown>>;
     };
     expect(geminiJson.name).toBe("droit-civil-quebecois");
-    expect(geminiJson.version).toBe("3.3.1");
+    expect(geminiJson.version).toBe("3.4.0");
     expect(geminiJson.description).toBe(
       "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
     );
@@ -719,7 +725,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       },
       outils: {
         type: "http",
-        url: "https://outils.poirierlavoie.ca/mcp",
+        url: "https://outils.poirierlavoie.ca/mcp/oauth",
       },
     });
 
@@ -950,7 +956,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(resolu).toMatchObject({
       titulaireId: ID_TITULAIRE_EVALUATION,
       etat: "limite",
-      portee: "les_deux",
+      portee: "tous",
     });
 
     const resDash = await app.fetch(

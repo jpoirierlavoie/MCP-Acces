@@ -128,7 +128,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     const llms = await (await demander("/llms.txt")).text();
     expect(llms).toContain("37 MCP tools across 3 servers");
     expect(llms).toContain("(`juris`, 12 tools)");
-    expect(llms).toContain("(`outils`, 15 tools");
+    expect(llms).toContain("(`outils`, 15 tools)");
+    expect(llms).not.toContain("no account required");
     expect(llms).toContain(
       "10 skills, 60 reference sheets, 6 stateless review subagents, and 4 Python stdlib verification scripts for Claude, ChatGPT / Codex, and Google Gemini / Antigravity.",
     );
@@ -250,6 +251,8 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(gouverneHtml).toContain(String(QUOTAS_LIMITE_PAR_DEFAUT.local));
     expect(gouverneHtml).toContain("1031");
     expect(gouverneHtml).toContain("1032");
+    expect(gouverneHtml).toContain("1041");
+    expect(gouverneHtml).toContain("1045");
     expect(gouverneHtml).toContain("list_exempt_cases");
     expect(gouverneHtml).toContain("check_exempt_cases");
 
