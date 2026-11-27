@@ -35,9 +35,6 @@ jobs:
         with:
           results_file: results.sarif
           results_format: sarif
-          # Le GITHUB_TOKEN par défaut suffit à tous les contrôles sauf le détail de
-          # Branch-Protection ; un PAT permanent dans les secrets du dépôt serait une
-          # cible d'exfiltration inutile.
           publish_results: true
 
       - name: "Upload artifact"

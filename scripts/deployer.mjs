@@ -1,13 +1,5 @@
 #!/usr/bin/env node
-/**
- * Déploiement de production de `MCP-Acces` (`acces.poirierlavoie.ca`) :
- *   1. Arbre git propre obligatoire (le Worker annonce `COMMIT` sur `/health`).
- *   2. Vérification que `database_id` réel de `mcp-identite` a été renseigné dans `wrangler.jsonc`.
- *   3. Migrations D1 `mcp-identite` D'ABORD (`--remote`), puis déploiement du Worker avec `--var COMMIT:<sha>`.
- *
- * `CLOUDFLARE_API_TOKEN` est lu directement par `wrangler` dans l'environnement et n'est jamais
- * affiché ni passé en argument de ligne de commande.
- */
+
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";

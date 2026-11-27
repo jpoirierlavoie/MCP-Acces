@@ -1,16 +1,3 @@
-/**
- * Console libre-service du titulaire (`/moi` et `/moi/connexion`, `SPEC §3.4`, `§4.2`, `§5`, `§7`, `§9`) :
- * - connexion sans mot de passe par lien magique (`session_portail`, `GET` lecture seule -> `POST` consommation) ;
- * - session par cookie `__Host-acces_moi` (`HttpOnly; Secure; SameSite=Lax`) + jeton CSRF HMAC lié à la session ;
- * - émission (`frapperJeton`, affiché une seule fois) et révocation de jetons (`les_deux`, `legislation`, `jurisprudence`) ;
- * - extraits de configuration prêts à coller (`.mcp.json`, `mcp_config.json`, `gemini-extension.json`, `claude.ai`,
- *   Gemini App / Vertex AI OAuth `/mcp/oauth`, API Gemini Deep Research + préambule `SAFETY-KERNEL`) ;
- * - épreuve en direct, rotation et retrait immédiat (`retirerEntreeCoffreD1`) de la clé CanLII du coffre ;
- * - bascule `hybride_permis` (Workers AI vs FTS5 local) ;
- * - affichage des quotas journaliers UTC (`lireCompteursJourD1`) ;
- * - export JSON de portabilité et suppression intégrale en cascade Loi 25 (`supprimerCompteTitulaireD1`).
- */
-
 import {
   type BinaireD1,
   DUREE_LIEN_PORTAIL_MINUTES,
@@ -64,7 +51,7 @@ import {
 } from "../securite";
 import type { ContextePortail } from "../types";
 
-export interface SessionMoiActive {
+interface SessionMoiActive {
   readonly sessionId: string;
   readonly empreinteSession: string;
   readonly jetonCsrf: string;
@@ -768,7 +755,6 @@ export async function gererRouteMoi(
   const champs = lecture.champs;
   const action = champs.get("action") ?? "";
 
-  // Action publique non authentifiée : demande de lien magique
   if (action === "demander_lien") {
     const debitOk = await debitAcceptable(contexte.env.RL_DEMANDE_IP, contexte.ipClient);
     if (!debitOk) {
@@ -933,7 +919,6 @@ export async function gererRouteMoi(
     });
   }
 
-  // Toutes les autres actions exigent une session active ET un jeton CSRF valide
   if (!session) {
     return rendrePageConnexionMoi({
       statut: 401,
@@ -1103,7 +1088,7 @@ export async function gererRouteMoi(
         chiffre: entree.chiffre,
         repere: entree.repere,
         empreinteClef: entree.empreinte_clef,
-        // Autorise la ré-épreuve explicite même si elle avait été marquée refusée auparavant :
+
         etat: "valide",
       },
       construireAnneauMaitres(contexte.env),

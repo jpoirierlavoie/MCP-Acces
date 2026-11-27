@@ -1,11 +1,3 @@
-/**
- * Fichiers publics de découverte pour moteurs de recherche et agents IA (`/robots.txt`,
- * `/sitemap.xml` et `/llms.txt`) sur `acces.poirierlavoie.ca`.
- *
- * Purs, sans lecture de secret ni d'état de requête ; survivent au coupe-circuit `MCP_ENABLED` (`G22`)
- * et dérivent leurs constantes directement du code (`S20`).
- */
-
 import { POLITIQUES_RETENTION_IDENTITE, QUOTAS_ACTIF_PAR_DEFAUT } from "@poirierlavoie/mcp-socle";
 import {
   COURRIEL_CONTACT_RESPONSABLE,
@@ -17,7 +9,7 @@ import { CHEMINS_DOCUMENTS_GOUVERNANCE } from "./gouvernance";
 
 export const CHEMINS_DECOUVERTE_PUBLIQUE = ["/robots.txt", "/sitemap.xml", "/llms.txt"] as const;
 
-export type CheminDecouvertePublique = (typeof CHEMINS_DECOUVERTE_PUBLIQUE)[number];
+type CheminDecouvertePublique = (typeof CHEMINS_DECOUVERTE_PUBLIQUE)[number];
 
 export function estCheminDecouvertePublique(
   pathname: string,

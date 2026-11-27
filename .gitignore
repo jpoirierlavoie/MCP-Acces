@@ -1,9 +1,7 @@
-# Node / Worker
 node_modules/
 .wrangler/
 worker-configuration.d.ts
 
-# Secrets locaux — ne JAMAIS versionner
 cf.token
 *.token
 .dev.vars
@@ -21,7 +19,6 @@ mcp.url
 secrets.json
 credentials.json
 
-# Configuration locale d'outils
 .claude/settings.local.json
 .vscode/
 .idea/

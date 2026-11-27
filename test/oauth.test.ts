@@ -11,8 +11,8 @@ import {
   resoudreJeton,
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
+import { creerGestionnaireAcces } from "../src/index";
 import {
-  creerAppTest,
   creerEnvTest,
   creerExecutionContextTest,
   creerFetchSimule,
@@ -64,7 +64,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
   });
 
   it("sert la fiche RFC 8414 /.well-known/oauth-authorization-server", async () => {
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     const res = await app.fetch(
       new Request(`https://acces.poirierlavoie.ca${CHEMIN_SERVEUR_AUTORISATION}`),
       creerEnvTest(),
@@ -97,7 +97,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
   it("exécute le flux complet OAuth 2.1 + PKCE S256 (claude-web), bloque le rejeu de code_oauth et permet /oauth/revoke", async () => {
     const db = await reinitialiserBaseIdentite();
     const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_claude");
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     const envTest = creerEnvTest();
 
     const codeVerifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
@@ -116,7 +116,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         state: "etat_xyz_123",
       }).toString();
 
-    // 1. Sans session /moi -> redirige vers /moi?retour=...
     const resNonConnecte = await app.fetch(
       new Request(urlAuthorize),
       envTest,
@@ -125,7 +124,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resNonConnecte.status).toBe(303);
     expect(resNonConnecte.headers.get("Location")).toMatch(/^\/moi\?retour=/);
 
-    // 2. Avec session /moi -> écran de consentement avec CSP form-action autorisant https://claude.ai
     const resConsent = await app.fetch(
       new Request(urlAuthorize, { headers: { Cookie: cookieMoi } }),
       envTest,
@@ -136,10 +134,9 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       "form-action 'self' https://claude.ai",
     );
     const htmlConsent = await resConsent.text();
-    expect(htmlConsent).toContain("les_deux"); // Normalisé depuis "legislation jurisprudence"
+    expect(htmlConsent).toContain("les_deux");
     const jetonConsentement = extraireJetonConsentementHtml(htmlConsent);
 
-    // 2b. Altération de paramètres ou réutilisation d'un CSRF /moi générique -> 403 refusé
     const htmlMoi = await (
       await app.fetch(
         new Request("https://acces.poirierlavoie.ca/moi", { headers: { Cookie: cookieMoi } }),
@@ -209,7 +206,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       expect(resMutee.status, JSON.stringify(mutation)).toBe(403);
     }
 
-    // 3. Approbation POST -> 303 vers redirect_uri avec code + state
     const resApprouver = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
         method: "POST",
@@ -239,7 +235,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const codeBrulable = urlRappel.searchParams.get("code")!;
     expect(codeBrulable).toHaveLength(43);
 
-    // 4. OAuth 2.1 §4.1.2 : un mauvais code_verifier brûle immédiatement le code_oauth à usage unique
     const resMauvaisPkce = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -260,7 +255,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resMauvaisPkce.status).toBe(400);
 
-    // Toute tentative ultérieure avec ce même code (même avec le bon code_verifier) échoue en 400
     const resApresEchecPkce = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -281,7 +275,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resApresEchecPkce.status).toBe(400);
 
-    // Émettre un nouveau code propre pour l'échange nominal
     const resApprouver2 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
         method: "POST",
@@ -308,7 +301,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       "code",
     )!;
 
-    // 5. Échange valide sur POST /oauth/token -> émet un jeton standard dans DB_IDENTITE.jeton
     const resToken = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -350,7 +342,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         ?.titulaireId,
     ).toBe("tit_oauth_claude");
 
-    // 6. OAuth 2.1 §4.1.2 : le rejeu d'un code_oauth déjà échangé est refusé en 400 ET révoque immédiatement le jeton issu de ce code !
     const resRejeuCode = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -376,7 +367,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       .first<{ motif_revoc: string | null }>();
     expect(motifCompromission?.motif_revoc).toBe("compromission");
 
-    // 7. Émettre un second jeton puis éprouver la révocation RFC 7009 sur POST /oauth/revoke
     const resApprouver3 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
         method: "POST",
@@ -442,7 +432,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const clientIdCimdValide = "https://client-juridique.exemple.ca/oauth/metadata.json";
     const clientIdCimdRedir = "https://redir.exemple.ca/oauth/metadata.json";
 
-    const app = creerAppTest({
+    const app = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({
         appels: appelsExternes,
         documentsCimd: {
@@ -463,7 +453,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const envTest = creerEnvTest();
     const defi = await calculerDefiPkceS256(`${frapperJeton()}${frapperJeton().slice(0, 8)}`);
 
-    // 1. URI de redirection non inscrite -> erreur locale 400 (aucun en-tête Location !)
     const resMauvaiseUri = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -482,7 +471,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resMauvaiseUri.status).toBe(400);
     expect(resMauvaiseUri.headers.get("Location")).toBeNull();
 
-    // 2. G35 : PKCE plain rejeté
     const resPlain = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -501,7 +489,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resPlain.status).toBe(303);
     expect(resPlain.headers.get("Location")).toContain("error=invalid_request");
 
-    // 3. G36 : cibles SSRF CIMD rejetées AVANT tout appel réseau externe
     for (const ssrfClientId of [
       "https://127.0.0.1/oauth/client.json",
       "https://169.254.169.254/latest/meta-data",
@@ -528,7 +515,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     }
     expect(appelsExternes).toHaveLength(0);
 
-    // 3b. Un appelant NON authentifié sur un client CIMD valide est redirigé vers /moi SANS aucun fetch réseau externe !
     const resCimdSansSession = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -547,7 +533,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resCimdSansSession.headers.get("Location")).toMatch(/^\/moi\?retour=/);
     expect(appelsExternes).toHaveLength(0);
 
-    // 4. G36 : redirection HTTP sur un client CIMD bloquée par `redirect: "manual"` + rejet `3xx`
     const resCimdRedir = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -568,7 +553,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(appelsExternes).toHaveLength(1);
     expect(await resCimdRedir.text()).toContain("redirection HTTP refusée");
 
-    // 5. Client CIMD valide accepté (avec paramètre RFC 8707 `resource` -> portée implicite `jurisprudence`)
     const resCimdOk = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -590,7 +574,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(htmlCimd).toContain("Intégration CIMD Valide");
     expect(htmlCimd).toContain("jurisprudence");
 
-    // 6. Origine navigateur non autorisée sur /oauth/token -> 403 sans CORS
     const resOrigineInterdite = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -606,7 +589,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resOrigineInterdite.status).toBe(403);
     expect(resOrigineInterdite.headers.get("Access-Control-Allow-Origin")).toBeNull();
 
-    // 7. RL_OAUTH_IP (60/min) -> 61e requête en 429
     const rlOAuth = creerLimiteurFenetre(2);
     const envLim = creerEnvTest({ RL_OAUTH_IP: rlOAuth });
     for (let i = 0; i < 2; i++) {
@@ -645,7 +627,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
   it("G16 : le déclencheur planifié `scheduled` exécute `purgerRetentionsD1` sur les 6 tables éphémères/90j sans altérer les données actives", async () => {
     const db = await reinitialiserBaseIdentite();
     const horloge = () => new Date("2026-11-18T08:00:00.000Z");
-    const app = creerAppTest({ fetchExterne: creerFetchSimule(), horloge });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule(), horloge });
 
     await creerSessionMoiDirecte(db, "tit_cron_1");
 
@@ -653,7 +635,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const futurIso = "2026-11-19T08:00:00.000Z";
 
     await db.batch([
-      // demande_acces : une expirée, une active
       db
         .prepare(
           `INSERT INTO demande_acces (id, empreinte_jeton, invitation_id, nom, numero_membre, section, courriel, cabinet, attestation_le, attestation_ver, cgu_ver, cree_le, expire_le, consomme_le)
@@ -662,7 +643,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           ('da_ok', 'h_da_ok', NULL, 'Active', '222222', 'Montréal', 'c@b.ca', NULL, ?1, 'v1', 'v1', ?1, ?2, NULL)`,
         )
         .bind(passeIso, futurIso),
-      // invitation_acces : une expirée sans titulaire, une active
+
       db
         .prepare(
           `INSERT INTO invitation_acces (id, empreinte_code, courriel_cible, cohorte, cree_le, expire_le, consomme_le, titulaire_id)
@@ -671,7 +652,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           ('ia_ok', 'h_ia_ok', NULL, NULL, ?1, ?2, NULL, NULL)`,
         )
         .bind(passeIso, futurIso),
-      // code_oauth : un expiré, un actif
+
       db
         .prepare(
           `INSERT INTO code_oauth (id, titulaire_id, empreinte_code, client_id, redirect_uri, portee, defi_pkce, methode_pkce, cree_le, expire_le, consomme_le)
@@ -682,7 +663,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         .bind(passeIso, futurIso),
     ]);
 
-    // Compteurs et événements : un > 90 jours (2026-08-01), un récent (2026-11-17)
     await incrementerCompteurJourD1(db, {
       titulaireId: "tit_cron_1",
       jour: "2026-08-01",
@@ -748,7 +728,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       ).results.map((r) => r.minute),
     ).toEqual(["2026-11-17T10:00"]);
 
-    // Vérification EXPLAIN QUERY PLAN (aucun SCAN plein sur les requêtes de purge Loi 25, G16)
     for (const reqPurge of [
       "DELETE FROM evenement_technique WHERE minute < '2026-08-20T00:00'",
       "DELETE FROM compteur_jour WHERE jour < '2026-08-20'",
@@ -766,10 +745,9 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
   it("gère la boucle locale CLI RFC 8252, les clients confidentiels Basic/RFC 6749 §2.3, le refus utilisateur et la suspension avant échange", async () => {
     const db = await reinitialiserBaseIdentite();
     const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_cli");
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     const envTest = creerEnvTest();
 
-    // Enregistrer un client confidentiel (avec `+` et `%` dans le secret pour tester RFC 7617 et RFC 6749 §2.3.1)
     const secretConfidentiel = "secret+gemini%25enterprise_2026";
     await db
       .prepare(
@@ -782,7 +760,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const verifier = `${frapperJeton()}${frapperJeton().slice(0, 12)}`;
     const defi = await calculerDefiPkceS256(verifier);
 
-    // 1. Boucle locale sur port 80 rejetée, port éphémère IPv4 et IPv6 [::1] acceptés (CSP form-action compatible W3C CSP3)
     const resPort80 = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -839,7 +816,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resCliConsent.status).toBe(200);
     const consentCli = extraireJetonConsentementHtml(await resCliConsent.text());
 
-    // 2. Refus explicite de l'utilisateur -> access_denied, 0 code_oauth émis
     const resRefusUsager = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
         method: "POST",
@@ -867,7 +843,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       "http://127.0.0.1:54321/callback?error=access_denied&state=s1&iss=https%3A%2F%2Facces.poirierlavoie.ca",
     );
 
-    // 3. Client confidentiel : obtenir d'abord le jeton de consentement via GET, puis tester Basic RFC 7617 brut, rejet sans secret, rejet secret sur client public et RFC 8707 resource
     const resConfGet = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -910,7 +885,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resConfAutoriser.status).toBe(303);
     const codeConf = new URL(resConfAutoriser.headers.get("Location")!).searchParams.get("code")!;
 
-    // Un client public pré-inscrit (`claude-web`) qui soumet un client_secret inattendu reçoit 401 invalid_client
     const resSecretSurPublic = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -946,7 +920,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resSansSecret.status).toBe(401);
 
-    // Basic brut RFC 7617 (contenant `+` et `%` non réencodés en form-urlencoded)
     const basicHeaderBrut = `Basic ${btoa(`gemini-enterprise-ws:${secretConfidentiel}`)}`;
     const resDoubleAuth = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
@@ -968,7 +941,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resDoubleAuth.status).toBe(400);
 
-    // Échange avec restriction RFC 8707 `resource` sur /oauth/token (les_deux -> legislation)
     const resBasicOk = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -991,7 +963,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const jsonBasicOk = (await resBasicOk.json()) as { scope: string; access_token: string };
     expect(jsonBasicOk.scope).toBe("legislation");
 
-    // `resource` inconnue sur /oauth/token -> 400 invalid_target
     const resCodeResInconnue = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/authorize", {
         method: "POST",
@@ -1037,7 +1008,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resTargetInvalide.status).toBe(400);
     expect(((await resTargetInvalide.json()) as { error: string }).error).toBe("invalid_target");
 
-    // 4. Suspension du titulaire APRÈS émission d'un code_oauth mais AVANT échange -> échange bloqué (400)
     const resCliSansState = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -1102,14 +1072,13 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
   it("exécute RFC 7591 POST /oauth/register sans état (public loopback /oauth-callback et confidentiels), rejette altérations et SSRF, et explique l'attente Bottin", async () => {
     const db = await reinitialiserBaseIdentite();
     const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_dcr");
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     const envTest = creerEnvTest();
 
     const clientsAvant = (
       await db.prepare("SELECT COUNT(*) AS n FROM client_oauth").first<{ n: number }>()
     )?.n;
 
-    // 1. Rejets RFC 7591 sur SSRF / HTTP non loopback / métadonnées refusées
     const resSsrf = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/register", {
         method: "POST",
@@ -1139,7 +1108,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(resBadGrant.status).toBe(400);
     expect(((await resBadGrant.json()) as { error: string }).error).toBe("invalid_client_metadata");
 
-    // 2. Inscription publique sans état (Antigravity distant /oauth/callback + loopback /oauth-callback)
     const resRegAntigravityRemote = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/register", {
         method: "POST",
@@ -1185,7 +1153,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(metaPublic.response_types).toEqual(["code"]);
     expect(metaPublic.token_endpoint_auth_method).toBe("none");
 
-    // Aucune écriture D1 dans client_oauth (anti-pollution sans état)
     const clientsApres = (
       await db.prepare("SELECT COUNT(*) AS n FROM client_oauth").first<{ n: number }>()
     )?.n;
@@ -1194,7 +1161,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const verifier = `${frapperJeton()}${frapperJeton().slice(0, 12)}`;
     const defi = await calculerDefiPkceS256(verifier);
 
-    // Rejet d'un client_id dcr1.* altéré AVANT redirection
     const resAltere = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -1212,7 +1178,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resAltere.status).toBe(400);
 
-    // Flux complet DCR public : /oauth/authorize -> /oauth/token -> resoudreJeton + libelle lisible
     const urlAuthDcr =
       `https://acces.poirierlavoie.ca/oauth/authorize?` +
       new URLSearchParams({
@@ -1292,7 +1257,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(jetonLigne?.libelle).toContain("Antigravity IDE");
     expect(jetonLigne?.libelle).not.toContain("dcr1.");
 
-    // 3. Inscription confidentielle client_secret_post et client_secret_basic
     for (const methode of ["client_secret_post", "client_secret_basic"] as const) {
       const resRegConf = await app.fetch(
         new Request("https://acces.poirierlavoie.ca/oauth/register", {
@@ -1366,7 +1330,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         corpsOk.client_secret = regConf.client_secret;
       }
 
-      // D'abord sans secret -> 401 (avec code intact tant qu'il n'a pas été consommé)
       const resSansSec = await app.fetch(
         new Request("https://acces.poirierlavoie.ca/oauth/token", {
           method: "POST",
@@ -1396,7 +1359,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       expect(resConfOk.status, methode).toBe(200);
     }
 
-    // 4. Titulaire `en_attente` reçoit un message 403 clair mentionnant le Bottin des avocats et outils
     await db.prepare("UPDATE titulaire SET etat = 'en_attente' WHERE id = 'tit_oauth_dcr'").run();
     const resAttente = await app.fetch(
       new Request(urlAuthDcr, { headers: { Cookie: cookieMoi } }),
@@ -1416,7 +1378,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const chatgptRedirect = "https://chatgpt.com/connector_platform_oauth_redirect";
     const sansNoneClientId = "https://sans-none.exemple.org/oauth/client.json";
 
-    const app = creerAppTest({
+    const app = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({
         documentsCimd: {
           [chatgptClientId]: {
@@ -1447,7 +1409,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     const verifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
     const defi = await calculerDefiPkceS256(verifier);
 
-    // 1. CIMD avec SEP-3149 (private_key_jwt + none dans supported) + scopes tiers + RFC 8707 resource
     const urlAuth =
       `https://acces.poirierlavoie.ca/oauth/authorize?` +
       new URLSearchParams({
@@ -1499,7 +1460,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(urlRappel.searchParams.get("state")).toBe("cgpt_state_1");
     const code = urlRappel.searchParams.get("code")!;
 
-    // 2. Échange /oauth/token avec Origin: https://chatgpt.com et scope: offline_access
     const resToken = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/token", {
         method: "POST",
@@ -1526,7 +1486,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(tokenDoc.scope).toBe("legislation");
     expect(tokenDoc.access_token).toHaveLength(43);
 
-    // 3. Rejet de sécurité maintenu si token_endpoint_auth_methods_supported n'inclut pas "none"
     const resSansNone = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/oauth/authorize?` +
@@ -1544,7 +1503,6 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     );
     expect(resSansNone.status).toBe(400);
 
-    // 4. DCR /oauth/register accepte grant_types étendu (jwt-bearer) et restreint à authorization_code
     const resDcr = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/oauth/register", {
         method: "POST",

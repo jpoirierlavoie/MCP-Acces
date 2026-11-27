@@ -1,13 +1,3 @@
-/**
- * Parcours d'admission préalable sur `/demande` et `/demande/confirmer` (`SPEC §4.3`, `§5.1`, `§9`) :
- * - modes `MODE_ADMISSION` (`ferme` par défaut, `invitation`, `ouvert`) ;
- * - limitation d'arête `RL_DEMANDE_IP` (`10/min`, `namespace_id` `"1031"`) ;
- * - épreuve en direct de la clé API CanLII (`caseBrowse/fr/`) avec expurgation stricte (`G9`, `G10`) ;
- * - sas `demande_acces` sans contrainte `UNIQUE` empêchant tout squattage de numéro du Barreau ;
- * - confirmation courriel en deux temps (`GET` lecture seule -> `POST` consommation atomique, immunisée
- *   contre les analyseurs d'hyperliens d'entreprise de type SafeLinks / Proofpoint).
- */
-
 import {
   type BinaireD1,
   DUREE_DEMANDE_ACCES_MINUTES,
@@ -394,7 +384,6 @@ export async function gererRouteDemande(
     invitationId = inv.id;
   }
 
-  // Épreuve en direct de la clé API CanLII avant toute écriture en base.
   const epreuve = await eprouverClefCanliiEnDirect(clefCanlii, {
     baseUrl: contexte.env.CANLII_BASE_URL,
     fetchImpl: contexte.fetchExterne,
@@ -408,8 +397,6 @@ export async function gererRouteDemande(
     });
   }
 
-  // Vérification sans oracle d'énumération : si le courriel ou le numéro de membre appartient déjà
-  // à un titulaire confirmé, on répond exactement la même page neutre HTTP 200.
   const existant = await contexte.env.DB_IDENTITE.prepare(
     `SELECT id, courriel, etat
      FROM titulaire
@@ -675,7 +662,6 @@ export async function gererRouteConfirmationDemande(
     }
   }
 
-  // Contre-épreuve en direct de la clé scellée via `ouvrirCoffre` (G8, G10).
   const epreuve = await eprouverEntreeScelleeCanlii(
     demande.id,
     {
@@ -710,7 +696,6 @@ export async function gererRouteConfirmationDemande(
     });
   }
 
-  // Consommation atomique du sas avant insertion dans `titulaire`.
   const conso = await contexte.env.DB_IDENTITE.prepare(
     `UPDATE demande_acces
      SET consomme_le = ?2
@@ -799,9 +784,7 @@ export async function gererRouteConfirmationDemande(
       cabinet: demande.cabinet,
       originePortail: contexte.originePortail,
     });
-  } catch {
-    // Notification à l'exploitant strictement non bloquante : la demande confirmée demeure en base.
-  }
+  } catch {}
 
   return rendrePageConfirmationDemande({
     statut: 200,

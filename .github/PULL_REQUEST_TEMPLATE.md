@@ -1,7 +1,5 @@
 ## Résumé / Summary
 
-<!-- Décrire brièvement l'objet de la PR / Briefly describe the purpose of this PR -->
-
 ## Vérifications locales / Local Verification
 
 - [ ] `npm run type-check` (`tsc --noEmit`)

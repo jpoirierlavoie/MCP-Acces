@@ -1,9 +1,3 @@
-/**
- * Page d'accueil publique (`GET /`) de `acces.poirierlavoie.ca` (`SPEC §9`).
- *
- * Pure : aucune lecture de secret ni d'état de requête ; survit au coupe-circuit `MCP_ENABLED` (`G22`).
- */
-
 import { COURRIEL_CONTACT_RESPONSABLE, ORIGINE_PORTAIL_PAR_DEFAUT } from "../constantes";
 import {
   barreSuite,
@@ -103,7 +97,7 @@ ${biP([params.descFr], [params.descEn])}
 </article>`;
 }
 
-export function construireCorpsAccueil(): string {
+function construireCorpsAccueil(): string {
   return `<header>
 ${barreSuite(true, true)}
 <div class="bar">

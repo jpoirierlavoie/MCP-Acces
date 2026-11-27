@@ -162,11 +162,9 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
       expect(html).not.toMatch(/<link[^>]+stylesheet/i);
       expect(html).not.toContain("@import");
 
-      // Aucun attribut id="..." dupliqué dans le document
       const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]!);
       expect(new Set(ids).size, `${chemin} ids uniques`).toBe(ids.length);
 
-      // Barre de navigation inter-connecteurs et lien d'évitement clavier
       expect(html, `${chemin} barre suite`).toContain('<nav class="suite"');
       expect(html, `${chemin} lien lois`).toContain('href="https://legislation.poirierlavoie.ca/"');
       expect(html, `${chemin} lien juris`).toContain(
@@ -179,20 +177,17 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
       );
       expect(html, `${chemin} titre EN`).toMatch(/<title data-fr="[^"]+" data-en="[^"]+">/);
 
-      // Schéma JSON-LD valide
       const ldMatch =
         /<script type="application\/ld\+json" nonce="[^"]+">([\s\S]*?)<\/script>/.exec(html);
       expect(ldMatch, `${chemin} JSON-LD`).not.toBeNull();
       const ld = JSON.parse(ldMatch![1]!) as Record<string, unknown>;
       expect(ld["@context"]).toBe("https://schema.org");
 
-      // Parité bilingue exacte sur les pages publiques
       const fr = (html.match(/data-l="fr"/g) ?? []).length;
       const en = (html.match(/data-l="en"/g) ?? []).length;
       expect(fr, `${chemin} parité FR/EN`).toBe(en);
       expect(fr).toBeGreaterThan(4);
 
-      // Symétrie des thèmes CSS et absence de couleur en dur hors CLAIR/SOMBRE
       const css = html.slice(html.indexOf("<style>") + 7, html.indexOf("</style>"));
       const sansJeux = css.replace(/^[\s\S]*?html\.t-dark\{[^}]*\}/, "");
       expect(sansJeux).not.toMatch(/#[0-9a-f]{3,8}\b/i);
@@ -217,8 +212,6 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
       expect(htmlAccueil).toContain(`<section id="${s.id}"`);
     }
 
-    // /demande porte la barre de suite, le bilinguisme FR/EN et les attributs autocomplete,
-    // tandis que /moi et /exploitant demeurent épurés sans barre de suite.
     const htmlDemande = await (
       await demander("/demande", { env: creerEnvTest({ MODE_ADMISSION: "ouvert" }) })
     ).text();

@@ -1,18 +1,7 @@
 name: verifier-deploiement
 
-# CONTRÔLE DE DÉRIVE — il REGARDE, il ne déploie rien et ne le peut pas.
-#
-# ╔═════════════════════════════════════════════════════════════════════════════╗
-# ║ Filet de sécurité indépendant sans secret : aucun jeton,                   ║
-# ║ `permissions: contents: read`, un simple GET sur `/health`.                 ║
-# ║ Il détecte un déploiement manqué (`npm run deploy`), ou une                 ║
-# ║ désynchronisation silencieuse entre `main` et la production                 ║
-# ║ (`https://acces.poirierlavoie.ca/health`).                                  ║
-# ╚═════════════════════════════════════════════════════════════════════════════╝
-
 on:
   schedule:
-    # Une fois par jour, 11h29 UTC — en semaine comme en fin de semaine.
     - cron: "29 11 * * *"
   workflow_dispatch:
 
@@ -33,8 +22,6 @@ jobs:
         with:
           egress-policy: audit
 
-      # Aucun `checkout` : on n'a besoin ni du code, ni de l'historique. `github.sha`
-      # porte déjà le commit de tête de la branche par défaut.
       - name: La version en ligne est-elle celle de main ?
         env:
           ATTENDU_LONG: ${{ github.sha }}

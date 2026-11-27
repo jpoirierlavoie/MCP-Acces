@@ -1,13 +1,5 @@
-/**
- * Constantes canoniques du portail `MCP-Acces` (`acces.poirierlavoie.ca`).
- *
- * Conformément à la décision `S20`, les pages publiques `/conformite` et `/gouverne` dérivent
- * directement de ces constantes et de celles exportées par `@poirierlavoie/mcp-socle` : aucune
- * valeur numérique de quota, de débit ou de rétention n'est recopiée à la main en prose.
- */
-
 export const SERVICES_MCP = ["legislation", "jurisprudence"] as const;
-export type ServiceMcp = (typeof SERVICES_MCP)[number];
+type ServiceMcp = (typeof SERVICES_MCP)[number];
 
 export const USAGE_COFFRE_CANLII = "canlii";
 export const VERSION_COFFRE_COURANTE = 1;
@@ -21,7 +13,6 @@ export const EXPEDITEUR_PAR_DEFAUT = "noreply@acces.poirierlavoie.ca";
 export const ORIGINE_PORTAIL_PAR_DEFAUT = "https://acces.poirierlavoie.ca";
 export const CANLII_BASE_URL_PAR_DEFAUT = "https://api.canlii.org/v1";
 
-/** Compte technique isolé pour l'évaluation d'admission aux annuaires (Claude / OpenAI / Google). */
 export const ID_TITULAIRE_EVALUATION = "tit_evaluation_annuaire";
 export const NUMERO_MEMBRE_EVALUATION = "0000000";
 export const COURRIEL_EVALUATION_PAR_DEFAUT = "evaluation@poirierlavoie.ca";
@@ -29,19 +20,14 @@ export const NOM_TITULAIRE_EVALUATION = "Évaluation d'annuaire (Marketplace Rev
 export const CABINET_TITULAIRE_EVALUATION =
   "Compte technique isolé et révocable (Claude / OpenAI / Google)";
 
-/** Délai maximal d'examen contradictoire d'une demande écrite de rétablissement (`/cgu`, §10). */
 export const DELAI_RETABLISSEMENT_JOURS_OUVRABLES = 5;
 
-/** Durée de vie par défaut d'un jeton émis par échange OAuth 2.1 : 90 jours (en secondes). */
 export const DUREE_JETON_OAUTH_SECONDES = 90 * 86_400;
 
-/** Durée de validité d'une session navigateur d'exploitation (`/exploitant`) : 4 heures. */
 export const DUREE_SESSION_EXPLOITANT_SECONDES = 4 * 3_600;
 
-/** Durée de validité par défaut d'un code d'invitation de cohorte : 14 jours. */
 export const DUREE_INVITATION_DEFAUT_JOURS = 14;
 
-/** Les 15 sections régionales officielles du Barreau du Québec. */
 export const SECTIONS_BARREAU = [
   "Abitibi-Témiscamingue",
   "Arthabaska",
@@ -62,7 +48,6 @@ export const SECTIONS_BARREAU = [
 
 export type SectionBarreau = (typeof SECTIONS_BARREAU)[number];
 
-/** Motifs fermés de transition d'état autorisés par `CHECK (motif IN (...))` dans `registre_gouverne`. */
 export const MOTIFS_GOUVERNE = [
   "admission",
   "refus_admission",
@@ -76,7 +61,7 @@ export const MOTIFS_GOUVERNE = [
 
 export type MotifGouverne = (typeof MOTIFS_GOUVERNE)[number];
 
-export interface RegleDebitArete {
+interface RegleDebitArete {
   readonly worker: "MCP-Legislation" | "MCP-Jurisprudence" | "MCP-Acces";
   readonly liaison: string;
   readonly namespaceId: string;
@@ -86,10 +71,6 @@ export interface RegleDebitArete {
   readonly effet: string;
 }
 
-/**
- * Inventaire complet des limiteurs d'arête inter-dépôts (`SPEC §6.1`, porte `G34`), exposé
- * dynamiquement sur `/gouverne` (`S20`).
- */
 export const PLAFONDS_DEBIT_ARETE: readonly RegleDebitArete[] = [
   {
     worker: "MCP-Legislation",
@@ -201,7 +182,6 @@ export const PLAFONDS_DEBIT_ARETE: readonly RegleDebitArete[] = [
   },
 ] as const;
 
-/** Ressources MCP OAuth 2.1 reconnues pour le paramètre optionnel `resource` (RFC 8707). */
 export const RESSOURCES_OAUTH_CONNUES: Readonly<Record<string, ServiceMcp>> = {
   "https://legislation.poirierlavoie.ca/mcp/oauth": "legislation",
   "https://legislation.poirierlavoie.ca/mcp": "legislation",
@@ -209,10 +189,6 @@ export const RESSOURCES_OAUTH_CONNUES: Readonly<Record<string, ServiceMcp>> = {
   "https://jurisprudence.poirierlavoie.ca/mcp": "jurisprudence",
 } as const;
 
-/**
- * Préambule `SAFETY-KERNEL` obligatoire pour tout appel autonome à l'API Gemini Deep Research
- * (`SPEC §3.4`, `store=True` / `background=True`).
- */
 export const PREAMBULE_SAFETY_KERNEL_DEEP_RESEARCH = `CONTRAINTES IMPÉRATIVES (DROIT CIVIL QUÉBÉCOIS — PALIER 2/3) :
 1. Confidentialité stricte : Requête entièrement anonymisée ; n'inclure aucun nom de client, fait identifiant, extrait de pièce ni numéro de dossier dans aucune recherche web ni aucun champ de recherche libre \`query\` (\`lois.find_relevant\`, \`lois.search_text\`).
 2. Sources primaires obligatoires (\`fail-closed\`) : Ne jamais réciter un article, un délai, un seuil indexé ou le ratio d'un arrêt de mémoire. Vérifier les textes via \`lois\` (\`get_article\` / \`get_articles\` avec date de consolidation) et authentifier les arrêts via \`juris\` (\`verify_citations\`, \`get_case\`, \`citator\` / \`subsequent_history\`). Si un connecteur requis échoue (\`401\`, \`403\`, \`404\`, \`429\`, \`[CLEF_ABSENTE]\`, \`[CLEF_REFUSEE]\`, \`QUOTA_EPUISE\`, hors ligne — sur \`403\` sur requête libre \`query\` sur \`lois\`, \`juris\` ou \`outils\`, reformuler sans apostrophes, guillemets ni opérateurs SQL, ou lire par article exact; si le \`403\` persiste, traiter comme blocage) sans repli local prévu, s'arrêter sur le volet touché, nommer le connecteur et demander d'autoriser ou de rétablir l'accès (\`acces.poirierlavoie.ca/moi\`, ou admission préalable sur \`acces.poirierlavoie.ca/demande\`) ou de fournir le texte officiel. N'énoncer un ratio ou paragraphe d'arrêt qu'après lecture du texte intégral officiel en session ; sinon laisser explicitement :
