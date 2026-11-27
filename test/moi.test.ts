@@ -13,10 +13,10 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
 import { COURRIEL_EVALUATION_PAR_DEFAUT, ID_TITULAIRE_EVALUATION } from "../src/constantes";
+import { creerGestionnaireAcces } from "../src/index";
 import { validerCheminRetourInterne } from "../src/securite";
 import {
   CLEF_CANLII_VALIDE_TEST,
-  creerAppTest,
   creerBoiteCourriel,
   creerEnvTest,
   creerExecutionContextTest,
@@ -78,7 +78,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     const db = await reinitialiserBaseIdentite();
     await insererTitulaireActif(db, "tit_moi_1");
 
-    // Pré-remplir des compteurs et un événement technique pour éprouver l'affichage et l'export Loi 25
     await incrementerCompteurJourD1(db, {
       titulaireId: "tit_moi_1",
       jour: jourUtc(),
@@ -106,13 +105,12 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
 
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite });
-    const app = creerAppTest({
+    const app = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({
         clefsCanliiValides: [CLEF_CANLII_VALIDE_TEST, CLEF_ROTATION_TEST],
       }),
     });
 
-    // 1. Demande de lien magique sur courriel inconnu -> même réponse neutre 200, aucun courriel envoyé
     const resInconnu = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -128,7 +126,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(resInconnu.status).toBe(200);
     expect(boite.messages.length).toBe(0);
 
-    // 2. Demande de lien magique sur le titulaire actif
     const resLien = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -153,7 +150,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       "jeton",
     )!;
 
-    // GET ne consomme pas le lien magique
     const resGetLien = await app.fetch(
       new Request(`https://acces.poirierlavoie.ca${mUrl![1]!}`, { method: "GET" }),
       envTest,
@@ -161,7 +157,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     );
     expect(resGetLien.status).toBe(200);
 
-    // POST consomme le lien et émet le cookie __Host-acces_moi
     const resPostLien = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi/connexion", {
         method: "POST",
@@ -180,7 +175,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(setCookieBrut).toContain("SameSite=Lax");
     const cookieSession = extraireEnteteCookiePair(resPostLien);
 
-    // Rejeu du lien magique refusé
     const resRejeuLien = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi/connexion", {
         method: "POST",
@@ -192,7 +186,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     );
     expect(resRejeuLien.status).toBe(400);
 
-    // 3. Ouverture du tableau de bord /moi : extraits clients + préambule SAFETY-KERNEL + quotas
     const resMoi = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         headers: { Cookie: cookieSession },
@@ -214,7 +207,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(htmlMoi).not.toContain(CLEF_CANLII_VALIDE_TEST);
     const csrf = extraireCsrfHtml(htmlMoi);
 
-    // 4. Tentative POST sans CSRF valide -> 403
     const resSansCsrf = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -234,7 +226,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     );
     expect(resSansCsrf.status).toBe(403);
 
-    // 5. Frapper un jeton `legislation` (affiché une seule fois, jamais sur le GET suivant)
     const resCreerJeton = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -259,7 +250,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(mJetonClair?.[1]).toBeDefined();
     const jetonClair = mJetonClair![1]!;
 
-    // Au rechargement GET, le jeton complet a disparu (seule la queue de 6 car. subsiste)
     const htmlRechargement = await (
       await app.fetch(
         new Request("https://acces.poirierlavoie.ca/moi", {
@@ -272,14 +262,12 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(htmlRechargement).not.toContain(jetonClair);
     expect(htmlRechargement).toContain(`…${jetonClair.slice(-6)}`);
 
-    // Le jeton émis résout bien sur `legislation` et est refusé sur `jurisprudence`
     const depot = creerDepotJetonsD1(db);
     expect(
       (await resoudreJeton(depot, [jetonClair], { service: "legislation" }))?.titulaireId,
     ).toBe("tit_moi_1");
     expect(await resoudreJeton(depot, [jetonClair], { service: "jurisprudence" })).toBeNull();
 
-    // 6. Bascule `hybride_permis` (1 -> 0) reflétée dans `resoudreJeton`
     const resHybride = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -301,7 +289,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       (await resoudreJeton(depot, [jetonClair], { service: "legislation" }))?.hybridePermis,
     ).toBe(false);
 
-    // 7. Révocation du jeton -> `resoudreJeton` rend immédiatement `null`
     const jetonRow = await db
       .prepare("SELECT id FROM jeton WHERE titulaire_id = 'tit_moi_1' LIMIT 1")
       .first<{ id: string }>();
@@ -324,7 +311,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(resRevoquer.status).toBe(200);
     expect(await resoudreJeton(depot, [jetonClair], { service: "legislation" })).toBeNull();
 
-    // 8. Épreuve en direct, rotation puis retrait immédiat (`retirerEntreeCoffreD1`, G8) de la clé CanLII
     const resEprouver = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -387,7 +373,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       ),
     ).toEqual({ ok: false, motif: "ABSENTE" });
 
-    // 9. Export Loi 25 en JSON (sans blobs chiffrés ni empreintes secrètes)
     const resExport = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -411,7 +396,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(jsonExport.compteurs_journaliers.length).toBe(2);
     expect(jsonExport.evenements_techniques.length).toBe(1);
 
-    // 10. Suppression intégrale du compte Loi 25 (`supprimerCompteTitulaireD1`)
     const resSupprSansMot = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -486,7 +470,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
 
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
     const resLien = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
@@ -524,7 +508,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     ).text();
     const csrf = extraireCsrfHtml(htmlMoi);
 
-    // Frappe de jeton et épreuve sortante CanLII interdites (403) pour un compte `revoque`
     const resFrappeInterdite = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -558,7 +541,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     );
     expect(resEpreuveInterdite.status).toBe(403);
 
-    // Retrait immédiat de la clé du coffre, export Loi 25 et suppression du compte autorisés !
     const resRetraitOk = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -619,7 +601,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
 
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
     await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
@@ -676,7 +658,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     const authLois = "Bearer $" + "{MCP_LEGISLATION_SECRET}";
     const authJuris = "Bearer $" + "{MCP_JURISPRUDENCE_SECRET}";
 
-    // 1. Claude Code / Claude Desktop (.mcp.json — OAuth 2.1 sans configuration)
     const mcpJson = extraireBlocJson(".mcp.json");
     expect(mcpJson).toEqual({
       mcpServers: {
@@ -695,7 +676,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       },
     });
 
-    // 2. Google Antigravity (mcp_config.json — OAuth 2.1 sans configuration)
     const agyJson = extraireBlocJson("mcp_config.json") as {
       mcpServers: Record<string, Record<string, unknown>>;
     };
@@ -713,7 +693,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       },
     });
 
-    // 3. Gemini CLI (gemini-extension.json — OAuth 2.1 sans configuration)
     const geminiJson = extraireBlocJson("gemini-extension.json") as {
       name: string;
       version: string;
@@ -744,12 +723,10 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       },
     });
 
-    // Mode sans navigateur / CLI / CI (Bearer /mcp) toujours documenté
     expect(htmlMoi).toContain("Mode sans navigateur / CLI / CI");
     expect(htmlMoi).toContain(authLois);
     expect(htmlMoi).toContain(authJuris);
 
-    // Encadré d'accueil /demande lorsque /moi est appelé depuis /oauth/authorize
     const resConnexionOAuth = await app.fetch(
       new Request(
         "https://acces.poirierlavoie.ca/moi?retour=%2Foauth%2Fauthorize%3Fclient_id%3Dclaude-web",
@@ -766,9 +743,8 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
   it("isole le compte d'évaluation d'annuaire (fermé par défaut, OAuth 2.1 PKCE complet, /moi lecture seule et révocation 1 clic)", async () => {
     const db = await reinitialiserBaseIdentite();
     const boite = creerBoiteCourriel();
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
-    // 1. Fermé par défaut sans EVALUATION_TOKEN valide (absent ou < 32 car.)
     for (const secretOff of [undefined, "", "trop_court"]) {
       const envOff = creerEnvTest({ COURRIEL: boite, EVALUATION_TOKEN: secretOff });
       const htmlSansSecret = await (
@@ -796,7 +772,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       expect(resPostOff.status).toBe(403);
     }
 
-    // 2. Provisionnement du compte via /exploitant avec état 'limite'
     const envEval = creerEnvTest({
       COURRIEL: boite,
       EVALUATION_TOKEN: SECRET_EVALUATION_TEST,
@@ -822,7 +797,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(resProvision.status).toBe(200);
     expect(boite.messages).toHaveLength(0);
 
-    // 3. demander_lien sur evaluation@poirierlavoie.ca répond neutre 200 sans envoyer de courriel
     const resMagicNeutre = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -838,7 +812,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     expect(resMagicNeutre.status).toBe(200);
     expect(boite.messages).toHaveLength(0);
 
-    // 4. Parcours complet OAuth 2.1 + PKCE S256 pour un évaluateur (claude-web)
     const codeVerifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
     const codeChallenge = await calculerDefiPkceS256(codeVerifier);
     const redirectUri = "https://claude.ai/api/mcp/auth_callback";
@@ -875,7 +848,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     ).text();
     expect(htmlLoginEval).toContain('id="carte-evaluation"');
 
-    // Mauvais secret / mauvais courriel -> 401
     for (const mauvais of [
       { courriel: COURRIEL_EVALUATION_PAR_DEFAUT, mdp: "mauvais_mot_de_passe_000000000000" },
       { courriel: "autre@exemple.ca", mdp: SECRET_EVALUATION_TEST },
@@ -897,7 +869,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       expect(resEchec.status).toBe(401);
     }
 
-    // Connexion nominale -> 303 vers /oauth/authorize?... + cookie __Host-acces_moi
     const resLoginEval = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -917,7 +888,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     const cookieEval = extraireEnteteCookiePair(resLoginEval);
     expect(cookieEval).toContain("__Host-acces_moi=");
 
-    // Écran de consentement OAuth 2.1 + échange /oauth/token
     const resConsent = await app.fetch(
       new Request(urlAuthorize, { headers: { Cookie: cookieEval } }),
       envEval,
@@ -983,7 +953,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       portee: "les_deux",
     });
 
-    // 5. /moi en lecture seule : formulaires d'écriture absents et rejetés en 403 si forgés
     const resDash = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", { headers: { Cookie: cookieEval } }),
       envEval,
@@ -1032,7 +1001,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       expect(res403.status, actionInterdite.action).toBe(403);
     }
 
-    // 6. Limitation de débit RL_DEMANDE_IP sur connexion_evaluation (429 après dépassement)
     const rlStrict = creerLimiteurFenetre(2);
     const envRl = creerEnvTest({
       COURRIEL: boite,
@@ -1076,7 +1044,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
     );
     expect(res429.status).toBe(429);
 
-    // 7. Déconnexion permise pendant la session lecture seule, puis suspension dans /exploitant coupant reconnexion et jeton OAuth sans courriel
     const resLogout = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",
@@ -1114,7 +1081,6 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       await resoudreJeton(depot, [tokenPayload.access_token], { service: "jurisprudence" }),
     ).toBeNull();
 
-    // Reconnexion refusée une fois suspendu (401)
     const resReconnSuspendu = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/moi", {
         method: "POST",

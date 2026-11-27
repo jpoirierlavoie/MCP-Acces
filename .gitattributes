@@ -1,7 +1,5 @@
-# Auto detect text files and perform LF normalization
 * text=auto
 
-# Fins de ligne LF dans la copie de travail (cohérence Windows / Linux CI et Biome).
 *.ts            text eol=lf
 *.mjs           text eol=lf
 *.json          text eol=lf

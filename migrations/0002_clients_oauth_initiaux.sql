@@ -1,7 +1,3 @@
--- Clients OAuth 2.1 publics pré-inscrits sans secret symétrique (PKCE S256 obligatoire, SPEC §9).
--- Les clients d'espace de travail Google Gemini App / Vertex AI supplémentaires peuvent être
--- enregistrés ou désactivés depuis `/exploitant` (`gestionExploitant`) ou par CIMD anti-SSRF.
-
 INSERT OR IGNORE INTO client_oauth (
   client_id, libelle, empreinte_secret, uris_redirection_json, portees_permises, actif, cree_le
 ) VALUES

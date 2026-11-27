@@ -7,9 +7,9 @@ import {
 } from "@poirierlavoie/mcp-socle";
 import { beforeEach, describe, expect, it } from "vitest";
 import { COURRIEL_CONTACT_RESPONSABLE, NUMERO_MEMBRE_EVALUATION } from "../src/constantes";
+import { creerGestionnaireAcces } from "../src/index";
 import {
   CLEF_CANLII_VALIDE_TEST,
-  creerAppTest,
   creerBoiteCourriel,
   creerEnvTest,
   creerExecutionContextTest,
@@ -41,7 +41,7 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
   });
 
   it("fermé par défaut sur MODE_ADMISSION ('ferme' ou absent) et rejette les requêtes cross-site", async () => {
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     for (const mode of ["ferme", undefined, "inconnu"]) {
       const envFerme = creerEnvTest({ MODE_ADMISSION: mode });
       const ctx = creerExecutionContextTest();
@@ -88,7 +88,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(resSecFetchCross.status).toBe(403);
 
-    // 415 sur mauvais Content-Type
     const res415 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -100,7 +99,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(res415.status).toBe(415);
 
-    // 413 sur corps dépassant MAX_OCTETS_FORMULAIRE (16 Kio)
     const res413 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -112,7 +110,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(res413.status).toBe(413);
 
-    // 400 sur séquence d'octets UTF-8 invalide
     const resUtf8Invalide = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -126,7 +123,7 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
   });
 
   it("applique RL_DEMANDE_IP à 10/min (429 à la 11e requête)", async () => {
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
     const rl = creerLimiteurFenetre(10);
     const envLim = creerEnvTest({ RL_DEMANDE_IP: rl });
 
@@ -138,7 +135,7 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
             "Content-Type": "application/x-www-form-urlencoded",
             "CF-Connecting-IP": "198.51.100.42",
           },
-          body: construireCorpsDemande({ nom: "" }), // Échoue en 400 après le contrôle de débit
+          body: construireCorpsDemande({ nom: "" }),
         }),
         envLim,
         creerExecutionContextTest(),
@@ -165,7 +162,9 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
   it("G9 : refuse une clé CanLII invalide et expurge toute clé des messages d'erreur réseau", async () => {
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite });
-    const appRefus = creerAppTest({ fetchExterne: creerFetchSimule({ clefsCanliiValides: [] }) });
+    const appRefus = creerGestionnaireAcces({
+      fetchExterne: creerFetchSimule({ clefsCanliiValides: [] }),
+    });
 
     const resRefus = await appRefus.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
@@ -182,9 +181,8 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(htmlRefus).not.toContain("clef_invalide_secret_xyz");
     expect(boite.messages.length).toBe(0);
 
-    // Simulation d'une exception réseau contenant l'URL complète avec ?api_key=...
     const secretFuitant = "clef_ultra_secrete_canlii_9999";
-    const appErreur = creerAppTest({
+    const appErreur = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({ erreurReseauCanlii: "Échec DNS amont" }),
     });
     const resErreur = await appErreur.fetch(
@@ -201,10 +199,9 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(htmlErreur).not.toContain(secretFuitant);
     expect(htmlErreur).toContain("[EXPURGE]");
 
-    // Épreuve CanLII avec `redirect: "manual"` et rejet explicite de toute redirection 3xx sans fuite de clé
     const appelsCanlii: Array<{ url: string; init?: RequestInit }> = [];
     const secretRedir = "clef_canlii_redir_protegee_2026";
-    const appRedir = creerAppTest({
+    const appRedir = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({
         appels: appelsCanlii,
         redirectionCanlii: "https://autre-hote.exemple/vol",
@@ -232,9 +229,8 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const db = await reinitialiserBaseIdentite();
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
-    // 1. Un tiers tente de squatter le numéro du Barreau 201845-3 avec une fausse boîte courriel
     const resSquat = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -250,13 +246,11 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(resSquat.status).toBe(200);
 
-    // Aucun enregistrement n'existe dans `titulaire` : la vraie avocate n'est PAS bloquée !
     const nbTitulairesAvant = await db
       .prepare("SELECT COUNT(*) AS n FROM titulaire")
       .first<{ n: number }>();
     expect(nbTitulairesAvant?.n).toBe(0);
 
-    // 2. La vraie avocate soumet sa demande avec le même numéro 2018453 (sans tiret -> même normalisation)
     const resVraie = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -288,7 +282,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
       `https://acces.poirierlavoie.ca${cheminConfirmer}`,
     ).searchParams.get("jeton")!;
 
-    // 3. Un robot SafeLinks / Proofpoint effectue un GET sur le lien : ne doit PAS consommer le jeton
     const resSafeLinks = await app.fetch(
       new Request(`https://acces.poirierlavoie.ca${cheminConfirmer}`, { method: "GET" }),
       envTest,
@@ -300,7 +293,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
       (await db.prepare("SELECT COUNT(*) AS n FROM titulaire").first<{ n: number }>())?.n,
     ).toBe(0);
 
-    // 4. L'avocate clique sur le bouton POST de confirmation -> promotion atomique vers titulaire + coffre_clef
     const resConfirmer = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -313,7 +305,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resConfirmer.status).toBe(200);
     expect(await resConfirmer.text()).toContain("en_attente");
 
-    // Rejeu du même jeton refusé en 400
     const resRejeu = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -325,7 +316,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(resRejeu.status).toBe(400);
 
-    // Vérification en base : titulaire créé et clé ouvrable via `ouvrirCoffre`
     const titulaire = await db
       .prepare("SELECT id, etat, numero_membre, courriel_verifie_le FROM titulaire LIMIT 1")
       .first<{ id: string; etat: string; numero_membre: string; courriel_verifie_le: string }>();
@@ -367,7 +357,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(ouvert).toEqual({ ok: true, client: true, provenance: "coffre" });
 
-    // 5. Absence d'oracle d'énumération : resoumettre pour ce même titulaire rend le même HTTP 200 neutre
     const resDoublon = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -387,7 +376,10 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const boite = creerBoiteCourriel();
     const envInvitation = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "invitation" });
     const maintenant = new Date("2026-11-18T12:00:00.000Z");
-    const app = creerAppTest({ fetchExterne: creerFetchSimule(), horloge: () => maintenant });
+    const app = creerGestionnaireAcces({
+      fetchExterne: creerFetchSimule(),
+      horloge: () => maintenant,
+    });
 
     const codeInvitation = frapperJeton();
     await db
@@ -402,7 +394,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
       )
       .run();
 
-    // Mauvais courriel refusé
     const resMauvaisCourriel = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -417,7 +408,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     expect(resMauvaisCourriel.status).toBe(400);
 
-    // Bon courriel accepté
     const resBon = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -458,7 +448,7 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
     let enPanne = true;
 
-    const app = creerAppTest({
+    const app = creerGestionnaireAcces({
       fetchExterne: async (entree, init) => {
         if (enPanne) {
           return new Response("Service Unavailable", { status: 503 });
@@ -479,7 +469,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     );
     const jeton = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
 
-    // Indisponibilité transitoire CanLII lors de la confirmation -> 503 avec jeton non consommé et formulaire de réessai présent
     enPanne = true;
     const resPanne = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
@@ -493,7 +482,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resPanne.status).toBe(503);
     expect(await resPanne.text()).toContain(`value="${jeton}"`);
 
-    // CanLII rétabli : deux soumissions concurrentes avec le même jeton -> exactement une réussit (200) et l'autre échoue (400)
     enPanne = false;
     const [r1, r2] = await Promise.all([
       app.fetch(
@@ -525,12 +513,11 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const db = await reinitialiserBaseIdentite();
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
     const alertesExploitant = () =>
       boite.messages.filter((m) => m.to === COURRIEL_CONTACT_RESPONSABLE);
 
-    // (a) POST /demande non confirmé : courriel envoyé uniquement au demandeur, zéro alerte à l'exploitant
     const resDemande = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -553,7 +540,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
 
     const jeton1 = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
 
-    // Préchargement GET SafeLinks : zéro alerte à l'exploitant
     const resGetConf = await app.fetch(
       new Request(
         `https://acces.poirierlavoie.ca/demande/confirmer?jeton=${encodeURIComponent(jeton1)}`,
@@ -565,7 +551,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resGetConf.status).toBe(200);
     expect(alertesExploitant().length).toBe(0);
 
-    // (b) POST /demande/confirmer : promotion atomique + alerte envoyée à COURRIEL_CONTACT_RESPONSABLE
     const resPostConf = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -588,7 +573,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(alerte.subject).toContain("2020119");
     expect(alerte.subject).not.toMatch(/[\r\n]/);
 
-    // Contenu texte et HTML complet (échappé contre l'injection HTML)
     expect(alerte.text).toContain("Claire <Bélanger>");
     expect(alerte.text).toContain("2020119");
     expect(alerte.text).toContain("Québec");
@@ -604,7 +588,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(alerte.html).toContain("Bélanger &amp; Co");
     expect(alerte.html).toContain('href="https://acces.poirierlavoie.ca/exploitant"');
 
-    // Aucun secret, jeton, repère ni empreinte de coffre dans l'alerte
     const coffre1 = await db
       .prepare("SELECT repere, empreinte_clef FROM coffre_clef LIMIT 1")
       .first<{ repere: string; empreinte_clef: string }>();
@@ -621,7 +604,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
       expect(alerte.html).not.toContain(secretInterdit);
     }
 
-    // Un rejeu du jeton de confirmation (400) ou une resoumission doublon sur /demande n'envoie aucune nouvelle alerte exploitant
     const resRejeu = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -651,8 +633,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resDoublon.status).toBe(200);
     expect(alertesExploitant().length).toBe(1);
 
-    // (c) Panne d'envoi `env.COURRIEL.send` lors de POST /demande/confirmer (et cabinet vide) :
-    // la confirmation réussit en 200 et conserve le titulaire + sa clé scellée en base
     const resDemande2 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -711,12 +691,11 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     const db = await reinitialiserBaseIdentite();
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
     const alertesExploitant = () =>
       boite.messages.filter((m) => m.to === COURRIEL_CONTACT_RESPONSABLE);
 
-    // 1. Rejet des noms/cabinets purement invisibles ou sans lettres et des courriels porteurs de contrôles/bidi
     const casInvalides: Array<Record<string, string>> = [
       { nom: "\u200B\u200B\u200B" },
       { nom: "\u2800\u2800\u2800" },
@@ -742,7 +721,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     }
     expect(boite.messages).toHaveLength(0);
 
-    // 2. Assainissement des contrôles C1 (\x85), séparateurs (\u2028) et surcharges bidirectionnelles (\u202E, \u2066..\u2069)
     const entetesAvocat1 = {
       "Content-Type": "application/x-www-form-urlencoded",
       "CF-Connecting-IP": "198.51.100.21",
@@ -769,7 +747,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resBidi.status).toBe(200);
     const jetonBidi = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
 
-    // Deuxième demande concurrente pour le MÊME numéro du Barreau avant confirmation de la première
     const resConcurrente = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {
         method: "POST",
@@ -787,7 +764,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resConcurrente.status).toBe(200);
     const jetonConcurrent = /jeton=([A-Za-z0-9_-]{43})/.exec(boite.dernier().text)![1]!;
 
-    // Confirmation de la première demande -> 200 + 1 alerte exploitant exempte de tout caractère Cc/Cf
     const resConf1 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -806,7 +782,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(alerte.text.replace(/\n/g, "")).not.toMatch(/[\p{Cc}\p{Cf}]/u);
     expect(alerte.html.replace(/\n/g, "")).not.toMatch(/[\p{Cc}\p{Cf}]/u);
 
-    // Confirmation de la seconde demande concurrente -> 409 Conflict et ZÉRO nouvelle alerte exploitant
     const resConf409 = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande/confirmer", {
         method: "POST",
@@ -819,7 +794,6 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
     expect(resConf409.status).toBe(409);
     expect(alertesExploitant()).toHaveLength(1);
 
-    // 3. Déterminisme du rappel de compte existant lorsque numero_membre correspond à une ligne antérieure mais courriel correspond au demandeur
     const maintenantIso = horodatageIsoUtc();
     await db
       .prepare(
@@ -841,8 +815,8 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
         },
         body: construireCorpsDemande({
           nom: "Anne Côté",
-          numero_membre: "202311-4", // Appartient à la 1re ligne (jbelanger@cabinet-mtl.ca)
-          courriel: "acote@cabinet-qc.ca", // Appartient à la 2e ligne (Anne Côté)
+          numero_membre: "202311-4",
+          courriel: "acote@cabinet-qc.ca",
         }),
       }),
       envTest,
@@ -858,7 +832,7 @@ describe("/demande & /demande/confirmer — Admission, sas anti-squattage, CanLI
   it("rejette le numéro technique réservé 0000000 sur /demande sans envoyer de courriel", async () => {
     const boite = creerBoiteCourriel();
     const envTest = creerEnvTest({ COURRIEL: boite, MODE_ADMISSION: "ouvert" });
-    const app = creerAppTest({ fetchExterne: creerFetchSimule() });
+    const app = creerGestionnaireAcces({ fetchExterne: creerFetchSimule() });
 
     const res = await app.fetch(
       new Request("https://acces.poirierlavoie.ca/demande", {

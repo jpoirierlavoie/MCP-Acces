@@ -1,17 +1,3 @@
-/**
- * Serveur d'autorisation OAuth 2.1 (`SPEC §4.4`, `§9`, portes `G34`, `G35`, `G36`) :
- * - `GET /.well-known/oauth-authorization-server` (RFC 8414) ;
- * - `GET/POST /oauth/authorize` (session `/moi` active vérifiée avant tout appel réseau externe CIMD,
- *   jeton de consentement HMAC liant tous les paramètres de la requête OAuth, PKCE `S256` obligatoire,
- *   `normaliserPorteeOAuth`, clients pré-inscrits `client_oauth` et résolution CIMD anti-SSRF
- *   `fetch(clientId, { redirect: "manual" })` avec rejet explicite des réponses `3xx` + `validerMetadonneesClientCimd`, égalité stricte
- *   `estUriRedirectionAutorisee`, compatibilité CSP `form-action` IPv6 `[::1]`) ;
- * - `POST /oauth/token` (`RL_OAUTH_IP` `60/min` `namespace_id` `"1032"`, validation RFC 8707 `resource`,
- *   consommation atomique immédiate à usage unique de `code_oauth`, révocation sur rejeu de code et
- *   émission d'un `jeton` D1 standard `frapperJeton()`) ;
- * - `POST /oauth/revoke` (RFC 7009, révocation idempotente sans oracle).
- */
-
 import {
   construireServeurAutorisation,
   corsHeaders,
@@ -49,9 +35,11 @@ import { boutonsEntete, esc, repondrePageHtml } from "../html/gabarit";
 import {
   calculerJetonConsentementOAuth,
   creerIdentifiant,
+  decoderBase64Utf8,
   emettreInscriptionDcrSansEtat,
   estCoffreConfigure,
   estOrigineFormulaireValide,
+  estReponseRedirection,
   lireFormulaireBorne,
   lireOctetsBornes,
   MAX_OCTETS_CIMD,
@@ -182,18 +170,37 @@ function rendreErreurLocaleAuthorize(statut: number, message: string, method?: s
   });
 }
 
+function uriRedirectionCorrespondClient(
+  redirectUri: string,
+  urisInscrites: readonly string[],
+): boolean {
+  const urisHttps = urisInscrites.filter((u) => u.startsWith("https://"));
+  const cheminsBoucle: string[] = [];
+  for (const u of urisInscrites) {
+    if (
+      u.startsWith("http://127.0.0.1") ||
+      u.startsWith("http://localhost") ||
+      u.startsWith("http://[::1]")
+    ) {
+      try {
+        const chemin = new URL(u).pathname;
+        if (!cheminsBoucle.includes(chemin)) cheminsBoucle.push(chemin);
+      } catch {}
+    }
+  }
+  return estUriRedirectionAutorisee(redirectUri, {
+    urisExactesAutorisees: urisHttps,
+    autoriserBoucleLocale: cheminsBoucle.length > 0,
+    ...(cheminsBoucle.length > 0 ? { cheminsBoucleLocale: cheminsBoucle } : {}),
+  });
+}
+
 type PrevalidationClientSansReseau =
   | { readonly ok: true; readonly mode: "preinscrit"; readonly client: ClientOAuthResolu }
   | { readonly ok: true; readonly mode: "dcr"; readonly client: ClientOAuthResolu }
   | { readonly ok: true; readonly mode: "cimd_en_attente" }
   | { readonly ok: false; readonly message: string };
 
-/**
- * Étape 1 hors réseau : vérifie les clients pré-inscrits en D1, les clients DCR sans état signés
- * HMAC (`dcr1.*`) ou la conformité syntaxique anti-SSRF d'un couple `(clientId, redirectUri)` CIMD
- * AVANT tout appel réseau sortant, afin qu'un visiteur non authentifié ne puisse jamais déclencher
- * un `fetch()` externe.
- */
 async function prevaliderClientEtRedirectionSansReseau(
   clientId: string,
   redirectUri: string,
@@ -217,29 +224,7 @@ async function prevaliderClientEtRedirectionSansReseau(
       };
     }
 
-    const urisHttps = dcr.urisRedirection.filter((u) => u.startsWith("https://"));
-    const cheminsBoucle: string[] = [];
-    for (const u of dcr.urisRedirection) {
-      if (
-        u.startsWith("http://127.0.0.1") ||
-        u.startsWith("http://localhost") ||
-        u.startsWith("http://[::1]")
-      ) {
-        try {
-          const chemin = new URL(u).pathname;
-          if (!cheminsBoucle.includes(chemin)) cheminsBoucle.push(chemin);
-        } catch {
-          // Ignoré
-        }
-      }
-    }
-
-    const uriValide = estUriRedirectionAutorisee(redirectUri, {
-      urisExactesAutorisees: urisHttps,
-      autoriserBoucleLocale: cheminsBoucle.length > 0,
-      ...(cheminsBoucle.length > 0 ? { cheminsBoucleLocale: cheminsBoucle } : {}),
-    });
-    if (!uriValide) {
+    if (!uriRedirectionCorrespondClient(redirectUri, dcr.urisRedirection)) {
       return {
         ok: false,
         message: "L'URI de redirection ne correspond à aucune URI inscrite pour ce client.",
@@ -286,29 +271,7 @@ async function prevaliderClientEtRedirectionSansReseau(
       return { ok: false, message: "Configuration d'URIs du client invalide." };
     }
 
-    const urisHttps = uris.filter((u) => u.startsWith("https://"));
-    const cheminsBoucle: string[] = [];
-    for (const u of uris) {
-      if (
-        u.startsWith("http://127.0.0.1") ||
-        u.startsWith("http://localhost") ||
-        u.startsWith("http://[::1]")
-      ) {
-        try {
-          const chemin = new URL(u).pathname;
-          if (!cheminsBoucle.includes(chemin)) cheminsBoucle.push(chemin);
-        } catch {
-          // Ignoré
-        }
-      }
-    }
-
-    const uriValide = estUriRedirectionAutorisee(redirectUri, {
-      urisExactesAutorisees: urisHttps,
-      autoriserBoucleLocale: cheminsBoucle.length > 0,
-      ...(cheminsBoucle.length > 0 ? { cheminsBoucleLocale: cheminsBoucle } : {}),
-    });
-    if (!uriValide) {
+    if (!uriRedirectionCorrespondClient(redirectUri, uris)) {
       return {
         ok: false,
         message: "L'URI de redirection ne correspond à aucune URI autorisée pour ce client.",
@@ -337,7 +300,6 @@ async function prevaliderClientEtRedirectionSansReseau(
     return { ok: false, message: "Identifiant client_id inconnu ou non conforme au format CIMD." };
   }
 
-  // Prévalidation purement locale de `redirect_uri` selon les règles CIMD anti-SSRF (`G36`)
   const uriSyntaxeCimd = validerMetadonneesClientCimd(
     clientId,
     {
@@ -354,10 +316,6 @@ async function prevaliderClientEtRedirectionSansReseau(
   return { ok: true, mode: "cimd_en_attente" };
 }
 
-/**
- * Étape 2 réseau (exécutée UNIQUEMENT après authentification d'un titulaire servi) :
- * récupère et valide le document CIMD distant avec `redirect: "manual"` et rejet explicite des réponses `3xx` (`G36`).
- */
 async function resoudreDocumentCimdDistant(
   clientId: string,
   redirectUri: string,
@@ -379,11 +337,7 @@ async function resoudreDocumentCimdDistant(
     };
   }
 
-  if (
-    String(reponseCimd.type) === "opaqueredirect" ||
-    reponseCimd.redirected ||
-    (reponseCimd.status >= 300 && reponseCimd.status < 400)
-  ) {
+  if (estReponseRedirection(reponseCimd)) {
     await reponseCimd.body?.cancel().catch(() => undefined);
     return {
       ok: false,
@@ -429,17 +383,7 @@ async function resoudreDocumentCimdDistant(
     };
   }
 
-  const urisHttps = validation.client.redirectUris.filter((u) => u.startsWith("https://"));
-  const cheminsBoucle = validation.client.redirectUris
-    .filter((u) => u.startsWith("http://"))
-    .map((u) => new URL(u).pathname);
-
-  const uriValide = estUriRedirectionAutorisee(redirectUri, {
-    urisExactesAutorisees: urisHttps,
-    autoriserBoucleLocale: cheminsBoucle.length > 0,
-    ...(cheminsBoucle.length > 0 ? { cheminsBoucleLocale: cheminsBoucle } : {}),
-  });
-  if (!uriValide) {
+  if (!uriRedirectionCorrespondClient(redirectUri, validation.client.redirectUris)) {
     return {
       ok: false,
       message: "L'URI de redirection n'est pas déclarée dans le document CIMD du client.",
@@ -642,7 +586,6 @@ export async function gererRouteAuthorize(
     return rendreErreurLocaleAuthorize(400, "Paramètre state invalide.", request.method);
   }
 
-  // 1. Prévalidation hors réseau de `client_id` et `redirect_uri` (zéro fetch externe avant auth)
   const prevalidation = await prevaliderClientEtRedirectionSansReseau(
     clientId,
     redirectUri,
@@ -652,7 +595,6 @@ export async function gererRouteAuthorize(
     return rendreErreurLocaleAuthorize(400, prevalidation.message, request.method);
   }
 
-  // 2. Authentification de la session `/moi` AVANT toute résolution réseau CIMD
   const session = await resoudreSessionMoiActive(request, url, contexte);
   if (!session) {
     if (request.method === "POST") {
@@ -689,7 +631,6 @@ export async function gererRouteAuthorize(
     );
   }
 
-  // 3. Résolution complète du client (avec fetch CIMD anti-SSRF uniquement maintenant que le titulaire est authentifié)
   let client: ClientOAuthResolu;
   if (prevalidation.mode === "preinscrit" || prevalidation.mode === "dcr") {
     client = prevalidation.client;
@@ -789,8 +730,7 @@ export async function gererRouteAuthorize(
 
     const urlRedirection = new URL(redirectUri);
     const origineRedirection = urlRedirection.origin;
-    // W3C CSP3 `host-source` n'accepte pas les littéraux IPv6 entre crochets (`[::1]`) sous
-    // Chromium/WebKit : on émet alors le `scheme-source` valide `http:` pour la boucle locale IPv6.
+
     const sourceFormAction =
       urlRedirection.protocol === "http:" && urlRedirection.hostname === "[::1]"
         ? "http:"
@@ -851,7 +791,6 @@ ${resourceNormalisee !== null ? `<input type="hidden" name="resource" value="${e
     });
   }
 
-  // POST /oauth/authorize : vérification cryptographique de l'intégralité des paramètres consentis
   if (!estCoffreConfigure(contexte.env)) {
     return rendreErreurLocaleAuthorize(503, "Configuration indisponible.");
   }
@@ -935,15 +874,8 @@ function extraireAuthBasicClient(request: Request):
   if (b64.length === 0 || b64.length > 4_096) {
     return { present: true, ok: false };
   }
-  let decodeUtf8: string;
-  try {
-    const binaire = atob(b64);
-    const octets = new Uint8Array(binaire.length);
-    for (let i = 0; i < binaire.length; i++) {
-      octets[i] = binaire.charCodeAt(i);
-    }
-    decodeUtf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(octets);
-  } catch {
+  const decodeUtf8 = decoderBase64Utf8(b64);
+  if (decodeUtf8 === null) {
     return { present: true, ok: false };
   }
   const idx = decodeUtf8.indexOf(":");
@@ -1007,7 +939,7 @@ async function authentifierClientEndpointOAuth(
 
   const clientIdCorps = champs.get("client_id");
   const clientSecretCorps = champs.get("client_secret");
-  // RFC 6749 §2.3 : interdiction d'employer simultanément Basic et client_secret dans le corps.
+
   if (basic.present && clientSecretCorps !== null) {
     return {
       ok: false,
@@ -1194,7 +1126,6 @@ export async function gererRouteToken(
     return repondreJsonOAuth({ error: "invalid_grant" }, 400, origin);
   }
 
-  // OAuth 2.1 §4.1.2 : tout rejeu d'un code déjà consommé révoque immédiatement le jeton qui en était issu.
   if (codeRow.consomme_le !== null) {
     await contexte.env.DB_IDENTITE.prepare(
       `UPDATE jeton
@@ -1213,8 +1144,6 @@ export async function gererRouteToken(
     return repondreJsonOAuth({ error: "invalid_grant" }, 400, origin);
   }
 
-  // Consommation atomique immédiate à la première présentation : tout échec ultérieur (PKCE,
-  // client_id, redirect_uri, resource ou scope) brûle définitivement le code à usage unique.
   const conso = await contexte.env.DB_IDENTITE.prepare(
     `UPDATE code_oauth
      SET consomme_le = ?2
@@ -1245,7 +1174,6 @@ export async function gererRouteToken(
     return repondreJsonOAuth({ error: "invalid_grant" }, 400, origin);
   }
 
-  // Validation RFC 8707 `resource` et restriction éventuelle de portée (`scope`) sur /oauth/token
   let porteeFinale = codeRow.portee;
   const scopeTokenFiltre = filtrerJetonsPorteeTiers(champs.get("scope"));
   const aScopeTokenExplicite = scopeTokenFiltre !== null && scopeTokenFiltre.length > 0;
@@ -1285,9 +1213,7 @@ export async function gererRouteToken(
     let hoteRappel = "rappel";
     try {
       hoteRappel = new URL(redirectUri).hostname.slice(0, 20);
-    } catch {
-      // Ignoré
-    }
+    } catch {}
     libelleJeton = `OAuth 2.1 (${nomClient} — ${hoteRappel})`.slice(0, 64);
   } else {
     libelleJeton = `OAuth 2.1 (${clientId.slice(0, 48)})`;

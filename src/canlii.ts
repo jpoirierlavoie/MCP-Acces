@@ -1,8 +1,3 @@
-/**
- * Épreuve en direct d'une clé API CanLII (`GET caseBrowse/fr/`) avec expurgation systématique
- * des messages d'erreur (`G9`) et ouverture en fermeture stricte sans retour du clair (`G8`, `G10`).
- */
-
 import {
   type AnneauMaitresCoffre,
   expurger,
@@ -11,11 +6,11 @@ import {
   sansBarresFinales,
 } from "@poirierlavoie/mcp-socle";
 import { CANLII_BASE_URL_PAR_DEFAUT, USAGE_COFFRE_CANLII } from "./constantes";
-import { lireOctetsBornes } from "./securite";
+import { estReponseRedirection, lireOctetsBornes } from "./securite";
 
 const MAX_OCTETS_REPONSE_CANLII = 524_288;
 
-export type ResultatEpreuveCanlii =
+type ResultatEpreuveCanlii =
   | { readonly ok: true }
   | {
       readonly ok: false;
@@ -23,17 +18,12 @@ export type ResultatEpreuveCanlii =
       readonly messagePublic: string;
     };
 
-export interface OptionsEpreuveCanlii {
+interface OptionsEpreuveCanlii {
   readonly baseUrl?: string;
   readonly fetchImpl?: typeof fetch;
   readonly timeoutMs?: number;
 }
 
-/**
- * Éprouve en direct une clé API CanLII contre `GET <baseUrl>/caseBrowse/fr/?api_key=...`.
- *
- * Aucune URL ni clé n'est jamais journalisée ; tout message d'exception est filtré par `expurger()`.
- */
 export async function eprouverClefCanliiEnDirect(
   clefBrute: string,
   options: OptionsEpreuveCanlii = {},
@@ -55,17 +45,13 @@ export async function eprouverClefCanliiEnDirect(
   try {
     const res = await fetchFn(url, {
       method: "GET",
-      // `workerd` ne prend en charge que `"follow"` et `"manual"` ; `"manual"` empêche toute redirection de fuiter `?api_key=`.
+
       redirect: "manual",
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (
-      String(res.type) === "opaqueredirect" ||
-      res.redirected ||
-      (res.status >= 300 && res.status < 400)
-    ) {
+    if (estReponseRedirection(res)) {
       await res.body?.cancel().catch(() => undefined);
       return {
         ok: false,
@@ -129,10 +115,6 @@ export async function eprouverClefCanliiEnDirect(
   }
 }
 
-/**
- * Éprouve une entrée déjà scellée en base (`demande_acces` ou `coffre_clef`) via `ouvrirCoffre`
- * afin que la clé en clair ne quitte jamais la fermeture interne (`G8`, `G10`).
- */
 export async function eprouverEntreeScelleeCanlii(
   titulaireId: string,
   entree: LigneCoffre | null | undefined,

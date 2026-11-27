@@ -2,10 +2,9 @@ import { env } from "cloudflare:workers";
 import type { Limiteur } from "@poirierlavoie/mcp-socle";
 import migration0001 from "../migrations/0001_initial.sql?raw";
 import migration0002 from "../migrations/0002_clients_oauth_initiaux.sql?raw";
-import { creerGestionnaireAcces } from "../src/index";
 import type { Env } from "../src/types";
 
-export interface CourrielCapture {
+interface CourrielCapture {
   from: string | EmailAddress;
   to?: string | EmailAddress | Array<string | EmailAddress>;
   replyTo?: string | EmailAddress;
@@ -20,7 +19,7 @@ export const SECRET_CONSOLE_TEST = "console_token_test_au_moins_trente_deux_cara
 export const SECRET_EVALUATION_TEST = "evaluation_secret_test_au_moins_trente_deux_caracteres_0123";
 export const CLEF_CANLII_VALIDE_TEST = "canlii_clef_individuelle_valide_2026_abcd";
 
-export function decouperInstructionsSql(sql: string): string[] {
+function decouperInstructionsSql(sql: string): string[] {
   const sansCommentaires = sql.replace(/--.*$/gm, "").trim();
   const instructions: string[] = [];
   let courant = "";
@@ -232,8 +231,4 @@ export function extraireEnteteCookiePair(res: Response): string {
   const sc = res.headers.get("Set-Cookie");
   if (!sc) throw new Error("En-tête Set-Cookie absent.");
   return sc.split(";", 1)[0]!;
-}
-
-export function creerAppTest(options?: Parameters<typeof creerGestionnaireAcces>[0]) {
-  return creerGestionnaireAcces(options);
 }

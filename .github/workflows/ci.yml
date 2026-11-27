@@ -1,6 +1,5 @@
 name: ci
 
-# Contrôles hors ligne sans secret : type-check, lint, tests (workerd + D1) et audit npm.
 on:
   push:
     branches: [main]

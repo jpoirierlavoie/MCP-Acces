@@ -6,13 +6,11 @@ export interface Env {
   RL_DEMANDE_IP?: Limiteur;
   RL_OAUTH_IP?: Limiteur;
 
-  // Secrets Wrangler (posés via `wrangler secret put`)
   COFFRE_MAITRE_V1?: string;
   COFFRE_MAITRE_V2?: string;
   CONSOLE_TOKEN?: string;
   EVALUATION_TOKEN?: string;
 
-  // Variables déclaratives (`wrangler.jsonc`)
   MCP_ENABLED?: string;
   MODE_ADMISSION?: string;
   ORIGINE_PORTAIL?: string;

@@ -1,8 +1,3 @@
-/**
- * Envoi transactionnel via la liaison Cloudflare Email Sending (`send_email`, zéro clé API,
- * expéditeur `noreply@acces.poirierlavoie.ca`, versions `text` et `html` systématiques).
- */
-
 import {
   COURRIEL_CONTACT_RESPONSABLE,
   DELAI_RETABLISSEMENT_JOURS_OUVRABLES,
@@ -10,19 +5,10 @@ import {
   type MotifGouverne,
 } from "./constantes";
 import { esc } from "./html/gabarit";
-import { normaliserCourriel } from "./securite";
+import { nettoyerLigneTexte, normaliserCourriel } from "./securite";
 import type { Env } from "./types";
 
 const NOM_EXPEDITEUR = "Accès MCP — Droit civil québécois";
-
-function nettoyerSujet(sujet: string): string {
-  return sujet
-    .replace(/[\t\r\n\v\f\u0085\u2028\u2029]+/g, " ")
-    .replace(/[\p{Cc}\p{Cf}\p{Cs}]+/gu, "")
-    .normalize("NFC")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function envelopperHtmlCourriel(titre: string, paragraphesHtml: readonly string[]): string {
   return `<!doctype html>
@@ -39,7 +25,7 @@ ${paragraphesHtml.join("\n")}
 </html>`;
 }
 
-export async function envoyerCourrielTransactionnel(
+async function envoyerCourrielTransactionnel(
   env: Env,
   params: {
     destinataire: string;
@@ -52,7 +38,7 @@ export async function envoyerCourrielTransactionnel(
     return false;
   }
   const expediteur = normaliserCourriel(env.EXPEDITEUR_COURRIEL) ?? EXPEDITEUR_PAR_DEFAUT;
-  const sujetPropre = nettoyerSujet(params.sujet);
+  const sujetPropre = nettoyerLigneTexte(params.sujet, 1, 998);
   if (!sujetPropre) {
     return false;
   }

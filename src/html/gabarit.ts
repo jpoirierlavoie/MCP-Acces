@@ -1,15 +1,5 @@
-/**
- * Gabarit HTML et identité visuelle partagée (`acces.poirierlavoie.ca`), alignée sur les
- * connecteurs jumeaux `MCP-Legislation`, `MCP-Jurisprudence` et `MCP-Outils` :
- * - typographie sans empattement système (`system-ui`), thèmes `CLAIR` / `SOMBRE` strictement symétriques, zéro couleur en dur ;
- * - bascule bilingue `FR · EN` sans requête et bascule de thème à trois états (`auto`, `light`, `dark`) ;
- * - politique CSP stricte à nonce cryptographique par réponse (`script-src 'nonce-...'`), zéro actif tiers,
- *   zéro en-tête CORS.
- */
-
 import { frapperJeton } from "@poirierlavoie/mcp-socle";
 
-/** Échappement HTML intégral appliqué à toute valeur interpolée. */
 export function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -19,12 +9,10 @@ export function esc(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Élément en ligne bilingue (`FR` + `EN` émis simultanément, filtrés en CSS). */
 export function bi(fr: string, en: string): string {
   return `<span data-l="fr">${esc(fr)}</span><span data-l="en" lang="en">${esc(en)}</span>`;
 }
 
-/** Suite de paragraphes bilingues. */
 export function biP(fr: readonly string[], en: readonly string[]): string {
   return (
     `<div data-l="fr">${fr.map((p) => `<p>${esc(p)}</p>`).join("")}</div>\n` +
@@ -173,8 +161,7 @@ html.l-fr [data-l=en],html.l-en [data-l=fr]{display:none}
 }
 `);
 
-// biome-ignore lint/complexity/noUselessStringRaw: parade délibérée contre la perte d'antislash
-const BOOT = compacterBloc(String.raw`
+const BOOT = compacterBloc(`
 try{
   var r=document.documentElement, c=[];
   var p=localStorage.getItem('accesLang')||(navigator.language||'fr').slice(0,2);
@@ -280,7 +267,6 @@ export function boutonsEntete(bilingue: boolean): string {
   return `<div class="btns">${boutonTheme}${boutonLangue}</div>`;
 }
 
-/** Barre de navigation inter-connecteurs de la suite `Droit civil québécois`. */
 export function barreSuite(bilingue: boolean, estAccueil = false): string {
   const txt = (fr: string, en: string) => (bilingue ? bi(fr, en) : esc(fr));
   const attrAccueil = estAccueil ? ' aria-current="page"' : "";
@@ -321,7 +307,7 @@ function rendrePastilleHaut(bilingue: boolean): string {
   );
 }
 
-export interface OptionsPageHtml {
+interface OptionsPageHtml {
   readonly titrePage: string;
   readonly titrePageEn?: string;
   readonly descriptionMeta: string;
@@ -339,10 +325,6 @@ export interface OptionsPageHtml {
   readonly jsonLd?: Record<string, unknown>;
 }
 
-/**
- * Construit une `Response` HTML complète protégée par CSP stricte à nonce unique, sans actif tiers
- * ni en-tête CORS.
- */
 export function repondrePageHtml(options: OptionsPageHtml): Response {
   const nonce = frapperJeton();
   const bilingue = options.bilingue ?? false;

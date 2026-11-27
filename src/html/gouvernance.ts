@@ -1,12 +1,3 @@
-/**
- * Les cinq documents publics de gouvernance et de conformité de `acces.poirierlavoie.ca` (`SPEC §10`) :
- *   1. `/cgu` — Conditions générales d'utilisation & Autorisation de pratique professionnelle ;
- *   2. `/confidentialite` — Politique de confidentialité conforme à la Loi 25 ;
- *   3. `/attestation` — Attestation solennelle d'inscription au Barreau et de clé CanLII ;
- *   4. `/conformite` — Fiche technique de conformité DÉRIVÉE DU CODE (`POLITIQUES_RETENTION_IDENTITE`, `S20`, `G18`) ;
- *   5. `/gouverne` — Registre de gouverne DÉRIVÉ DU CODE (`QUOTAS_ACTIF_PAR_DEFAUT`, `QUOTAS_LIMITE_PAR_DEFAUT`, `S20`).
- */
-
 import {
   DUREE_CODE_OAUTH_SECONDES,
   DUREE_DEMANDE_ACCES_MINUTES,
@@ -39,7 +30,7 @@ export const CHEMINS_DOCUMENTS_GOUVERNANCE = [
   "/gouverne",
 ] as const;
 
-export type CheminDocumentGouvernance = (typeof CHEMINS_DOCUMENTS_GOUVERNANCE)[number];
+type CheminDocumentGouvernance = (typeof CHEMINS_DOCUMENTS_GOUVERNANCE)[number];
 
 function barreNavigationPublique(): string {
   return `<p class="m"><a href="/">${bi("Accueil", "Home")}</a> · <a href="/demande">/demande</a> · <a href="/moi">/moi</a> · <a href="/cgu">/cgu</a> · <a href="/confidentialite">/confidentialite</a> · <a href="/attestation">/attestation</a> · <a href="/conformite">/conformite</a> · <a href="/gouverne">/gouverne</a></p>`;

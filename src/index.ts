@@ -1,19 +1,3 @@
-/**
- * Point d'entrée du Worker `MCP-Acces` (`https://acces.poirierlavoie.ca`, `SPEC §4`, `§9`, `§10`) :
- * - pages publiques survivant au coupe-circuit `MCP_ENABLED` (`G22`) : `GET /`, `/cgu`,
- *   `/confidentialite`, `/attestation`, `/conformite` (`S20`/`G18`), `/gouverne` (`S20`),
- *   ainsi que `/robots.txt`, `/sitemap.xml` et `/llms.txt` ;
- * - point de santé `/health` (`reponseSante`) ;
- * - admission préalable `/demande` et `/demande/confirmer` ;
- * - console libre-service `/moi` et `/moi/connexion` ;
- * - console d'exploitation `/exploitant` ;
- * - serveur d'autorisation OAuth 2.1 (`/.well-known/oauth-authorization-server`, `/oauth/register`,
- *   `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`) ;
- * - tâche planifiée quotidienne `scheduled` exécutant `purgerRetentionsD1` (`G16`).
- *
- * Aucune URL de requête ni aucun secret n'est jamais journalisé (`G9`).
- */
-
 import {
   CHEMIN_SERVEUR_AUTORISATION,
   drapeau,
@@ -46,9 +30,7 @@ function resoudreOriginePortail(env: Env): string {
       if (u.protocol === "https:" && u.username === "" && u.password === "") {
         return sansBarresFinales(u.origin);
       }
-    } catch {
-      // Repli sur la constante canonique
-    }
+    } catch {}
   }
   return ORIGINE_PORTAIL_PAR_DEFAUT;
 }
@@ -70,7 +52,6 @@ export function creerGestionnaireAcces(options: OptionsGestionnaireAcces = {}) {
       const url = new URL(request.url);
       const { pathname } = url;
 
-      // 1. Pages publiques qui survivent toujours au coupe-circuit `MCP_ENABLED` (`G22`)
       if (pathname === "/") {
         if (request.method !== "GET" && request.method !== "HEAD") {
           return repondreMethodeNonPermise(["GET", "HEAD"]);
@@ -92,7 +73,6 @@ export function creerGestionnaireAcces(options: OptionsGestionnaireAcces = {}) {
         return repondreDocumentGouvernance(pathname, request.method);
       }
 
-      // 2. Coupe-circuit global fermé par défaut (`MCP_ENABLED !== "true"` => 404 partout ailleurs)
       const actif = drapeau(env.MCP_ENABLED, false);
       if (pathname === "/health") {
         if (request.method !== "GET" && request.method !== "HEAD") {

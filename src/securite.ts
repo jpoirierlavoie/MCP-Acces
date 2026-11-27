@@ -1,13 +1,3 @@
-/**
- * Primitives de sécurité HTTP du portail `MCP-Acces` :
- * - lecture bornée et fatale UTF-8 des corps `application/x-www-form-urlencoded` et octets ;
- * - cookies `__Host-` `HttpOnly; Secure; SameSite=Lax|Strict` ;
- * - encapsulation stricte des secrets `COFFRE_MAITRE_V1` et `CONSOLE_TOKEN` (`G10` : aucune fonction
- *   exportée ne retourne de secret en clair) ;
- * - jetons CSRF sans état dérivés par `HMAC-SHA256` liés à la session active et vérifiés via `memeSecret` ;
- * - validation anti-redirection ouverte des chemins de retour internes.
- */
-
 import {
   type AnneauMaitresCoffre,
   bearerOf,
@@ -30,10 +20,10 @@ import {
 } from "./constantes";
 import type { Env } from "./types";
 
-export const MAX_OCTETS_FORMULAIRE = 16_384;
+const MAX_OCTETS_FORMULAIRE = 16_384;
 export const MAX_OCTETS_CIMD = 32_768;
 export const MAX_OCTETS_INSCRIPTION_DCR = 8_192;
-export const DUREE_CONSENTEMENT_OAUTH_SECONDES = 600;
+const DUREE_CONSENTEMENT_OAUTH_SECONDES = 600;
 
 const NOM_COOKIE_MOI_HTTPS = "__Host-acces_moi";
 const NOM_COOKIE_MOI_HTTP = "acces_moi";
@@ -151,7 +141,15 @@ export async function lireOctetsBornes(
   return { ok: true, octets: resultat };
 }
 
-export type ResultatFormulaire =
+export function estReponseRedirection(res: Response): boolean {
+  return (
+    String(res.type) === "opaqueredirect" ||
+    res.redirected ||
+    (res.status >= 300 && res.status < 400)
+  );
+}
+
+type ResultatFormulaire =
   | { readonly ok: true; readonly champs: URLSearchParams }
   | { readonly ok: false; readonly statut: 400 | 413 | 415; readonly message: string };
 
@@ -192,10 +190,6 @@ export async function lireFormulaireBorne(
   return { ok: true, champs: new URLSearchParams(texte) };
 }
 
-/**
- * Vérifie sur tout `POST` de formulaire navigateur que la requête provient de la même origine
- * (`same-origin` uniquement, rejetant à la fois `cross-site` et les sous-domaines voisins `same-site`).
- */
 export function estOrigineFormulaireValide(request: Request, urlRequete: URL): boolean {
   const secFetchSiteBrut = request.headers.get("Sec-Fetch-Site");
   const modeFetch = secFetchSiteBrut !== null ? secFetchSiteBrut.trim().toLowerCase() : null;
@@ -220,7 +214,7 @@ export function estOrigineFormulaireValide(request: Request, urlRequete: URL): b
   return true;
 }
 
-export function lireCookies(request: Request): Map<string, string> {
+function lireCookies(request: Request): Map<string, string> {
   const carte = new Map<string, string>();
   const brut = request.headers.get("Cookie");
   if (!brut || brut.length > 8_192) return carte;
@@ -256,7 +250,7 @@ function lireCookieExploitant(request: Request, estHttps: boolean): string | nul
   return cookies.get(estHttps ? NOM_COOKIE_EXPLOITANT_HTTPS : NOM_COOKIE_EXPLOITANT_HTTP) ?? null;
 }
 
-export function construireCookieExploitant(
+function construireCookieExploitant(
   valeur: string,
   estHttps: boolean,
   maxAgeSec = DUREE_SESSION_EXPLOITANT_SECONDES,
@@ -308,7 +302,7 @@ export async function verifierJetonCsrfMoi(
   return await memeSecret(soumis, attendu);
 }
 
-export interface ParametresConsentementOAuth {
+interface ParametresConsentementOAuth {
   readonly sessionId: string;
   readonly empreinteSession: string;
   readonly clientId: string;
@@ -457,7 +451,7 @@ async function verifierCookieExploitantInterne(
   return charge;
 }
 
-export type VerdictAuthExploitant =
+type VerdictAuthExploitant =
   | { readonly ok: true; readonly via: "bearer"; readonly csrf: null }
   | {
       readonly ok: true;
@@ -521,10 +515,6 @@ export function normaliserCourriel(brut: string | null | undefined): string | nu
   return propre;
 }
 
-/**
- * Normalise un numéro de membre du Barreau du Québec (ex. `123456-7` ou `1234567` -> `1234567`)
- * afin d'éviter qu'une variante de tiret contourne l'unicité ou crée un doublon.
- */
 export function normaliserNumeroMembre(brut: string | null | undefined): string | null {
   if (typeof brut !== "string") return null;
   const rogne = brut.trim();
@@ -577,10 +567,6 @@ export function normaliserValiderFormatCanlii(brut: string | null | undefined): 
   return propre;
 }
 
-/**
- * N'autorise comme cible de redirection post-connexion que `/moi` ou `/oauth/authorize?...` sur la
- * même origine (aucune URL absolue, aucun `//`, aucun `\`, aucun caractère de contrôle).
- */
 export function validerCheminRetourInterne(brut: string | null | undefined): string | null {
   if (typeof brut !== "string" || brut.length === 0 || brut.length > 4_096) return null;
   for (let i = 0; i < brut.length; i++) {
@@ -611,12 +597,15 @@ function encoderBase64UrlUtf8(texte: string): string {
   return btoa(binaire).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function decoderBase64UrlUtf8(brut: string): string | null {
-  if (!/^[A-Za-z0-9_-]+$/.test(brut) || brut.length % 4 === 1) {
-    return null;
+export function decoderBase64Utf8(brut: string, urlSafe = false): string | null {
+  let b64 = brut;
+  if (urlSafe) {
+    if (!/^[A-Za-z0-9_-]+$/.test(brut) || brut.length % 4 === 1) {
+      return null;
+    }
+    const padLen = (4 - (brut.length % 4)) % 4;
+    b64 = `${brut.replace(/-/g, "+").replace(/_/g, "/")}${"=".repeat(padLen)}`;
   }
-  const padLen = (4 - (brut.length % 4)) % 4;
-  const b64 = `${brut.replace(/-/g, "+").replace(/_/g, "/")}${"=".repeat(padLen)}`;
   try {
     const binaire = atob(b64);
     const octets = new Uint8Array(binaire.length);
@@ -629,12 +618,12 @@ function decoderBase64UrlUtf8(brut: string): string | null {
   }
 }
 
-export interface InscriptionDcrEmise {
+interface InscriptionDcrEmise {
   readonly clientId: string;
   readonly jetonAuthClient?: string;
 }
 
-export interface ClientDcrVerifie {
+interface ClientDcrVerifie {
   readonly clientId: string;
   readonly libelle: string;
   readonly urisRedirection: readonly string[];
@@ -696,7 +685,7 @@ export async function verifierClientDcrSansEtat(
     return null;
   }
 
-  const decode = decoderBase64UrlUtf8(chargeB64);
+  const decode = decoderBase64Utf8(chargeB64, true);
   if (!decode) return null;
   let tuple: unknown;
   try {
