@@ -17,8 +17,7 @@ export const ID_TITULAIRE_EVALUATION = "tit_evaluation_annuaire";
 export const NUMERO_MEMBRE_EVALUATION = "0000000";
 export const COURRIEL_EVALUATION_PAR_DEFAUT = "evaluation@poirierlavoie.ca";
 export const NOM_TITULAIRE_EVALUATION = "Évaluation d'annuaire (Marketplace Review)";
-export const CABINET_TITULAIRE_EVALUATION =
-  "Compte technique isolé et révocable (Claude / OpenAI / Google)";
+export const CABINET_TITULAIRE_EVALUATION = "Compte technique isolé et révocable (Claude / Google)";
 
 export const DELAI_RETABLISSEMENT_JOURS_OUVRABLES = 5;
 

@@ -107,21 +107,21 @@ ${boutonsEntete(true)}
 ${biP(
   [
     "Portail d'accès gratuit de la suite « Droit civil québécois ». Il permet à votre assistant IA " +
-      "(Claude, ChatGPT, Gemini ou Antigravity) de consulter directement le texte officiel des lois " +
+      "(Claude, Gemini ou Antigravity) de consulter directement le texte officiel des lois " +
       "et règlements (lois), de vérifier des citations dans CanLII (juris) et d'effectuer des calculs " +
       "et vérifications de greffe, de registres et de terminologie (outils) — plutôt que de répondre " +
       "de mémoire.",
-    "Comment démarrer avec le greffon (installation par archive .zip ou place de marché) : " +
+    "Comment démarrer avec le greffon (installation par place de marché) : " +
       "1) déposez votre demande sur /demande avec votre numéro du Barreau (et facultativement votre clé API CanLII pour juris) ; " +
       "2) installez le greffon droit-civil-quebecois dans votre assistant IA ; " +
       "3) cliquez sur « Connecter » pour autoriser l'accès via votre navigateur — sans code ni clé à recopier.",
   ],
   [
     "Free access portal for the « Québec Civil Law » suite. It connects your AI assistant " +
-      "(Claude, ChatGPT, Gemini, or Antigravity) directly to official consolidated statutes and " +
+      "(Claude, Gemini, or Antigravity) directly to official consolidated statutes and " +
       "regulations (lois), CanLII case-law citation checks (juris), and exact procedural, registry, " +
       "and terminology tools (outils) — instead of guessing from memory.",
-    "How to get started with the plugin (.zip archive or marketplace install): " +
+    "How to get started with the plugin (marketplace install): " +
       "1) apply once on /demande using your Barreau member number (and optionally your personal CanLII API key for juris); " +
       "2) install the droit-civil-quebecois plugin in your AI app; " +
       "3) click Connect and sign in through your browser — no config files or secret keys to copy.",
@@ -241,12 +241,12 @@ ${carteConnecteur({
 </div>
 ${biP(
   [
-    "Connexion dans Claude, ChatGPT, Gemini ou Antigravity : une fois votre compte approuvé, cliquez " +
+    "Connexion dans Claude, Gemini ou Antigravity : une fois votre compte approuvé, cliquez " +
       "simplement sur « Connecter » dans votre assistant IA (ou connectez les adresses de la suite " +
       "dans les réglages) et ouvrez votre session via votre navigateur — aucune clé technique à copier.",
   ],
   [
-    "Connecting in Claude, ChatGPT, Gemini, or Antigravity: once your account is approved, simply " +
+    "Connecting in Claude, Gemini, or Antigravity: once your account is approved, simply " +
       "click Connect in your AI app (or add the suite URLs in settings) and sign in through your " +
       "browser — no technical keys to copy into files.",
   ],
@@ -258,7 +258,7 @@ ${biP(
     "Les connecteurs proposent deux points d'entrée donnant accès aux mêmes outils : la connexion " +
       "interactive par navigateur OAuth 2.1 (/mcp/oauth, portée universelle « tous » rétrocompatible " +
       "avec « les_deux » et portées par service « legislation », « jurisprudence », « outils », utilisée " +
-      "par défaut dans Claude, ChatGPT, Google Antigravity et Gemini) et l'accès par jeton personnel " +
+      "par défaut dans Claude, Google Antigravity et Gemini) et l'accès par jeton personnel " +
       "Bearer sur /mcp (retournant un 404 uniforme sans jeton valide) destiné aux outils en ligne de " +
       "commande, aux scripts automatisés et à l'API Gemini Deep Research.",
     "Adresses des connecteurs : https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
@@ -268,7 +268,7 @@ ${biP(
   [
     "Two connection endpoints expose the same tools: browser-based OAuth 2.1 authorization " +
       "(/mcp/oauth, universal scope « tous » backwards-compatible with « les_deux » and per-service " +
-      "scopes « legislation », « jurisprudence », « outils », default in Claude, ChatGPT, Google " +
+      "scopes « legislation », « jurisprudence », « outils », default in Claude, Google " +
       "Antigravity, and Gemini) and personal Bearer token access on /mcp (returning a uniform 404 " +
       "without a valid token) for command-line tools, automated scripts, and Gemini API Deep Research.",
     "Connector URLs: https://legislation.poirierlavoie.ca/mcp/oauth (lois), " +
@@ -277,7 +277,7 @@ ${biP(
   ],
 )}
 </details>
-<p><a href="https://github.com/jpoirierlavoie/droit-civil-quebecois">${bi("Greffon d'instructions droit-civil-quebecois (10 compétences, 60 feuilles de référence, 6 sous-agents, archive .zip sur GitHub Releases)", "Guidance plugin droit-civil-quebecois (10 skills, 60 reference sheets, 6 subagents, .zip archive on GitHub Releases)")}</a></p>
+<p><a href="https://github.com/jpoirierlavoie/droit-civil-quebecois">${bi("Greffon d'instructions droit-civil-quebecois (10 compétences, 60 feuilles de référence, 6 sous-agents)", "Guidance plugin droit-civil-quebecois (10 skills, 60 reference sheets, 6 subagents)")}</a></p>
 </section>
 
 <section id="admission">
@@ -293,7 +293,7 @@ ${biP(
       "la demande expire simplement sans bloquer votre numéro du Barreau.",
     "3. Vérification au Bottin des avocats et utilisation : votre inscription active au Tableau de " +
       "l'Ordre est vérifiée manuellement. Dès la réception du courriel d'approbation, connectez " +
-      "directement les trois connecteurs (lois, juris, outils) dans Claude, ChatGPT ou Gemini via votre " +
+      "directement les trois connecteurs (lois, juris, outils) dans Claude ou Gemini via votre " +
       "navigateur (l'espace /moi permet ensuite d'ajouter ou gérer votre clé CanLII, vos préférences ou " +
       "d'éventuels jetons de script).",
   ],
@@ -306,7 +306,7 @@ ${biP(
       "automatically without locking your Barreau number.",
     "3. Bottin des avocats check and sign-in: active enrolment on the Roll of the Order is verified " +
       "manually. As soon as your approval email arrives, connect all three connectors (lois, juris, " +
-      "outils) in Claude, ChatGPT, or Gemini through your browser (you can visit /moi anytime to add or " +
+      "outils) in Claude or Gemini through your browser (you can visit /moi anytime to add or " +
       "update your CanLII key, search preferences, or optional script tokens).",
   ],
 )}

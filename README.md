@@ -9,7 +9,7 @@ Portail public d'admission et de gestion des accès pour la suite [`droit-civil-
 ## Pour les avocats (parcours d'accès)
 
 1. **Demande d'accès (`/demande`) :** fournir votre numéro de membre du Barreau du Québec et votre adresse courriel professionnelle (une clé API CanLII personnelle est facultative — vous pouvez la demander gratuitement sur `canlii.org` pour activer les recherches CanLII dans `juris`, ou la saisir plus tard dans `/moi` ; `lois` et `outils` fonctionnent sans clé CanLII). La demande est confirmée par courriel (lien valable 30 minutes), puis vérifiée manuellement au *Bottin des avocats*.
-2. **Connexion dans votre assistant IA :** une fois le compte activé, connectez les trois connecteurs (`lois`, `juris`, `outils`) dans Claude, ChatGPT, Gemini ou Antigravity directement via votre navigateur (OAuth 2.1 sur `/mcp/oauth`, portée universelle `tous` rétrocompatible avec `les_deux`, et portées par service `legislation`, `jurisprudence`, `outils`) — sans aucun jeton ni fichier technique à copier.
+2. **Connexion dans votre assistant IA :** une fois le compte activé, connectez les trois connecteurs (`lois`, `juris`, `outils`) dans Claude, Gemini ou Antigravity directement via votre navigateur (OAuth 2.1 sur `/mcp/oauth`, portée universelle `tous` rétrocompatible avec `les_deux`, et portées par service `legislation`, `jurisprudence`, `outils`) — sans aucun jeton ni fichier technique à copier.
 3. **Gestion libre-service (`/moi`) :** gérer vos connexions actives, ajouter, mettre à jour ou retirer votre clé CanLII, activer ou désactiver la recherche sémantique (par sens) dans `lois`, créer au besoin des jetons personnels universels (`tous`) pour `/mcp` (jeton `Bearer` en script ou ligne de commande ; refus uniforme `404` sans jeton valide), exporter vos données personnelles (Loi 25) ou supprimer votre compte.
 
 ---
@@ -55,7 +55,7 @@ npx.cmd wrangler deploy --dry-run
    ```powershell
    npx.cmd wrangler secret put COFFRE_MAITRE_V1
    npx.cmd wrangler secret put CONSOLE_TOKEN
-   # Facultatif (examen annuaires Claude / OpenAI / Google uniquement) :
+   # Facultatif (examen annuaires Claude / Google uniquement) :
    # npx.cmd wrangler secret put EVALUATION_TOKEN
    ```
 4. Déployer manuellement depuis un poste autorisé (migrations D1 d'abord via `scripts/deployer.mjs`, puis Worker via `npm.cmd run deploy` — aucun `CLOUDFLARE_API_TOKEN` n'est stocké en CI ; la sonde quotidienne `.github/workflows/verifier-deploiement.yml` vérifie l'alignement de `/health` sur `main`) :
