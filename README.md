@@ -16,7 +16,7 @@ Portail public d'admission et de gestion des accès pour la suite [`droit-civil-
 
 ## Surfaces exposées et architecture technique
 
-Socle partagé : [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.8`) et base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
+Socle partagé : [`@poirierlavoie/mcp-socle`](https://github.com/jpoirierlavoie/MCP-Socle) (`#v0.8.9`) et base Cloudflare D1 partagée **`mcp-identite`** (`DB_IDENTITE`).
 
 | Route | Accès | Rôle |
 |---|---|---|
