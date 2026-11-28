@@ -711,7 +711,7 @@ describe("/moi — Lien magique, CSRF, jetons, configurations Deep Research, cof
       mcpServers: Record<string, Record<string, unknown>>;
     };
     expect(geminiJson.name).toBe("droit-civil-quebecois");
-    expect(geminiJson.version).toBe("3.4.0");
+    expect(geminiJson.version).toBe("3.5.0");
     expect(geminiJson.description).toBe(
       "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
     );

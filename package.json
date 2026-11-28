@@ -1,6 +1,6 @@
 {
   "name": "mcp-acces",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Portail d'admission Barreau du Québec, coffre BYOK CanLII, console libre-service (/moi), console d'exploitation (/exploitant) et serveur d'autorisation OAuth 2.1 (acces.poirierlavoie.ca).",
   "license": "Apache-2.0",
@@ -23,7 +23,7 @@
     "@biomejs/biome": "^2.6.7",
     "@cloudflare/vitest-plugin": "^1.8.4",
     "@cloudflare/workers-types": "^5.20261115.1",
-    "@poirierlavoie/mcp-socle": "github:jpoirierlavoie/MCP-Socle#v0.8.8",
+    "@poirierlavoie/mcp-socle": "github:jpoirierlavoie/MCP-Socle#v0.8.9",
     "typescript": "^7.0.2",
     "vitest": "^4.1.12",
     "wrangler": "^4.162.0"

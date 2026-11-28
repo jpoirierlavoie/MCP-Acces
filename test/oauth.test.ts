@@ -1404,21 +1404,21 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
     expect(htmlAttente).not.toContain("demeure utilisable immédiatement");
   });
 
-  it("prend en charge ChatGPT OAuth 2.1 (CIMD SEP-3149, RFC 9207 iss, filtrage offline_access/OIDC, CORS et DCR grant_types)", async () => {
+  it("prend en charge Claude OAuth 2.1 (CIMD SEP-3149, RFC 9207 iss, filtrage offline_access/OIDC, CORS et DCR grant_types)", async () => {
     const db = await reinitialiserBaseIdentite();
-    const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_chatgpt");
-    const chatgptClientId = "https://chatgpt.com/oauth/client.json";
-    const chatgptRedirect = "https://chatgpt.com/connector_platform_oauth_redirect";
+    const cookieMoi = await creerSessionMoiDirecte(db, "tit_oauth_claude");
+    const claudeClientId = "https://claude.ai/oauth/client.json";
+    const claudeRedirect = "https://claude.ai/api/mcp/auth_callback";
     const sansNoneClientId = "https://sans-none.exemple.org/oauth/client.json";
 
     const app = creerGestionnaireAcces({
       fetchExterne: creerFetchSimule({
         documentsCimd: {
-          [chatgptClientId]: {
+          [claudeClientId]: {
             corps: {
-              client_id: chatgptClientId,
-              client_name: "ChatGPT",
-              redirect_uris: [chatgptRedirect],
+              client_id: claudeClientId,
+              client_name: "Claude",
+              redirect_uris: [claudeRedirect],
               token_endpoint_auth_method: "private_key_jwt",
               token_endpoint_auth_methods_supported: ["none", "private_key_jwt"],
             },
@@ -1435,8 +1435,8 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         },
       }),
     });
-    const envChatGpt = creerEnvTest({
-      ALLOWED_ORIGINS: "https://chatgpt.com,https://chat.openai.com,https://platform.openai.com",
+    const envClaude = creerEnvTest({
+      ALLOWED_ORIGINS: "https://claude.ai,https://claude.com",
     });
 
     const verifier = `${frapperJeton()}${frapperJeton().slice(0, 10)}`;
@@ -1446,23 +1446,23 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
       `https://acces.poirierlavoie.ca/oauth/authorize?` +
       new URLSearchParams({
         response_type: "code",
-        client_id: chatgptClientId,
-        redirect_uri: chatgptRedirect,
+        client_id: claudeClientId,
+        redirect_uri: claudeRedirect,
         scope: "legislation offline_access openid profile email",
         resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
         code_challenge: defi,
         code_challenge_method: "S256",
-        state: "cgpt_state_1",
+        state: "cl_state_1",
       }).toString();
 
     const resGet = await app.fetch(
       new Request(urlAuth, { headers: { Cookie: cookieMoi } }),
-      envChatGpt,
+      envClaude,
       creerExecutionContextTest(),
     );
     expect(resGet.status).toBe(200);
     const htmlConsent = await resGet.text();
-    expect(htmlConsent).toContain("ChatGPT");
+    expect(htmlConsent).toContain("Claude");
     expect(htmlConsent).toContain("<code>legislation</code>");
     const jetonConsent = extraireJetonConsentementHtml(htmlConsent);
 
@@ -1474,23 +1474,23 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           jeton_consentement: jetonConsent,
           decision: "autoriser",
           response_type: "code",
-          client_id: chatgptClientId,
-          redirect_uri: chatgptRedirect,
+          client_id: claudeClientId,
+          redirect_uri: claudeRedirect,
           scope: "legislation",
           resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
           code_challenge: defi,
           code_challenge_method: "S256",
-          state: "cgpt_state_1",
+          state: "cl_state_1",
         }).toString(),
       }),
-      envChatGpt,
+      envClaude,
       creerExecutionContextTest(),
     );
     expect(resPost.status).toBe(303);
     const urlRappel = new URL(resPost.headers.get("Location")!);
-    expect(`${urlRappel.origin}${urlRappel.pathname}`).toBe(chatgptRedirect);
+    expect(`${urlRappel.origin}${urlRappel.pathname}`).toBe(claudeRedirect);
     expect(urlRappel.searchParams.get("iss")).toBe("https://acces.poirierlavoie.ca");
-    expect(urlRappel.searchParams.get("state")).toBe("cgpt_state_1");
+    expect(urlRappel.searchParams.get("state")).toBe("cl_state_1");
     const code = urlRappel.searchParams.get("code")!;
 
     const resToken = await app.fetch(
@@ -1498,23 +1498,23 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Origin: "https://chatgpt.com",
+          Origin: "https://claude.ai",
         },
         body: new URLSearchParams({
           grant_type: "authorization_code",
-          client_id: chatgptClientId,
+          client_id: claudeClientId,
           code,
-          redirect_uri: chatgptRedirect,
+          redirect_uri: claudeRedirect,
           code_verifier: verifier,
           scope: "offline_access",
           resource: "https://legislation.poirierlavoie.ca/mcp/oauth",
         }).toString(),
       }),
-      envChatGpt,
+      envClaude,
       creerExecutionContextTest(),
     );
     expect(resToken.status).toBe(200);
-    expect(resToken.headers.get("Access-Control-Allow-Origin")).toBe("https://chatgpt.com");
+    expect(resToken.headers.get("Access-Control-Allow-Origin")).toBe("https://claude.ai");
     const tokenDoc = (await resToken.json()) as { access_token: string; scope: string };
     expect(tokenDoc.scope).toBe("legislation");
     expect(tokenDoc.access_token).toHaveLength(43);
@@ -1531,7 +1531,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           }).toString(),
         { headers: { Cookie: cookieMoi } },
       ),
-      envChatGpt,
+      envClaude,
       creerExecutionContextTest(),
     );
     expect(resSansNone.status).toBe(400);
@@ -1541,8 +1541,8 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          client_name: "ChatGPT DCR",
-          redirect_uris: [chatgptRedirect],
+          client_name: "Claude DCR",
+          redirect_uris: [claudeRedirect],
           token_endpoint_auth_method: "none",
           grant_types: [
             "authorization_code",
@@ -1551,7 +1551,7 @@ describe("OAuth 2.1 (RFC 8414, PKCE S256 G35, CIMD anti-SSRF G36, code_oauth ato
           ],
         }),
       }),
-      envChatGpt,
+      envClaude,
       creerExecutionContextTest(),
     );
     expect(resDcr.status).toBe(201);

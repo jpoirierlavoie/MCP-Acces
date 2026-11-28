@@ -221,7 +221,7 @@ function construireExtraitsClientsHtml(originePortail: string): string {
   const geminiExtensionJson = JSON.stringify(
     {
       name: "droit-civil-quebecois",
-      version: "3.4.0",
+      version: "3.5.0",
       description:
         "Litige civil et commercial québécois : 5 phases, 5 services, 6 sous-agents, 4 scripts de contrôle et 37 outils MCP officiels (« lois », « juris », « outils »).",
       contextFileName: [],
@@ -302,14 +302,6 @@ interaction = client.interactions.create(
   return `<section id="configurations">
 <h2>Guides de connexion par plateforme (avancé)</h2>
 <p class="m">Si vous utilisez Claude Code, Claude Desktop, Antigravity ou Gemini CLI avec le greffon déjà installé, il vous suffit normalement de cliquer sur « Connecter » dans votre assistant. Les configurations ci-dessous servent uniquement pour une connexion manuelle ou automatisée sans navigateur (<code>/mcp</code> avec jeton <code>Bearer</code> ou <code>?key=</code>, et en-tête optionnel <code>X-Clef-CanLII</code> sur <code>juris</code>).</p>
-
-<details>
-<summary>ChatGPT (Web et ordinateur — archive <code>.zip</code> + 3 connecteurs)</summary>
-<p class="m">1) Importez l'archive <code>droit-civil-quebecois-chatgpt-universal.zip</code> (depuis GitHub Releases) ; 2) Dans ChatGPT (<strong>+ → Add custom MCP server</strong>), ajoutez une seule fois ces trois adresses (<code>OAuth</code> pour les trois connecteurs) :</p>
-<pre><code>lois   : https://legislation.poirierlavoie.ca/mcp/oauth
-juris  : https://jurisprudence.poirierlavoie.ca/mcp/oauth
-outils : https://outils.poirierlavoie.ca/mcp/oauth</code></pre>
-</details>
 
 <details>
 <summary>1. Claude Code et Claude Desktop (<code>.mcp.json</code> — connexion par navigateur)</summary>
@@ -408,7 +400,7 @@ ${retourPropre ? `<input type="hidden" name="retour" value="${esc(retourPropre)}
 <input type="hidden" name="action" value="connexion_evaluation">
 ${retourPropre ? `<input type="hidden" name="retour" value="${esc(retourPropre)}">` : ""}
 <h2>Accès évaluateur d'annuaire / Marketplace Reviewer Sign-In</h2>
-<p class="m">Accès isolé en lecture seule réservé aux équipes d'examen (Anthropic, OpenAI, Google). / Isolated read-only sandbox access reserved for marketplace review teams (no email magic link required).</p>
+<p class="m">Accès isolé en lecture seule réservé aux équipes d'examen (Anthropic, Google). / Isolated read-only sandbox access reserved for marketplace review teams (no email magic link required).</p>
 <div class="champ">
 <label for="courriel_evaluation">Courriel d'évaluation / Reviewer Email</label>
 <input id="courriel_evaluation" name="courriel_evaluation" type="email" required autocomplete="off" maxlength="254">
@@ -548,9 +540,9 @@ ${
 </div>`
     : estServi
       ? `<div class="avert">
-<h2>Utilisateurs de Claude, ChatGPT ou Gemini : aucun jeton à créer ici</h2>
-<p>Si vous avez installé le greffon (via la place de marché ou une archive <code>.zip</code>), connectez simplement <code>lois</code>, <code>juris</code> et <code>outils</code> dans votre assistant IA et ouvrez votre session dans votre navigateur : vous n'avez <strong>pas</strong> besoin de créer un jeton manuel ni de copier de code ci-dessous.</p>
-<p class="m">Sur <code>claude.ai</code> ou ChatGPT (Web / ordinateur : <strong>+ → Add custom MCP server</strong>), ajoutez simplement <code>https://legislation.poirierlavoie.ca/mcp/oauth</code> (OAuth), <code>https://jurisprudence.poirierlavoie.ca/mcp/oauth</code> (OAuth) et <code>https://outils.poirierlavoie.ca/mcp/oauth</code> (OAuth).</p>
+<h2>Utilisateurs de Claude ou Gemini : aucun jeton à créer ici</h2>
+<p>Si vous avez installé le greffon depuis la place de marché, connectez simplement <code>lois</code>, <code>juris</code> et <code>outils</code> dans votre assistant IA et ouvrez votre session dans votre navigateur : vous n'avez <strong>pas</strong> besoin de créer un jeton manuel ni de copier de code ci-dessous.</p>
+<p class="m">Sur <code>claude.ai</code> ou Gemini App, ajoutez simplement <code>https://legislation.poirierlavoie.ca/mcp/oauth</code> (OAuth), <code>https://jurisprudence.poirierlavoie.ca/mcp/oauth</code> (OAuth) et <code>https://outils.poirierlavoie.ca/mcp/oauth</code> (OAuth).</p>
 </div>`
       : ""
 }

@@ -131,7 +131,7 @@ describe("Pages publiques, CSP stricte, bilinguisme, découverte et coupe-circui
     expect(llms).toContain("(`outils`, 15 tools)");
     expect(llms).not.toContain("no account required");
     expect(llms).toContain(
-      "10 skills, 60 reference sheets, 6 stateless review subagents, and 4 Python stdlib verification scripts for Claude, ChatGPT / Codex, and Google Gemini / Antigravity.",
+      "10 skills, 60 reference sheets, 6 stateless review subagents, and 4 Python stdlib verification scripts for Claude and Google Gemini / Antigravity.",
     );
     expect(llms).toContain("https://legislation.poirierlavoie.ca/");
     expect(llms).toContain("https://jurisprudence.poirierlavoie.ca/");
